@@ -26,15 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 // 定義庫存項目的類型
 type InventoryItem = {
@@ -73,7 +64,6 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = React.useState<string>("")
   const [categoryFilter, setCategoryFilter] = React.useState<string>("所有類別")
   const [statusFilter, setStatusFilter] = React.useState<string>("所有狀態")
-  const [isFilterActive, setIsFilterActive] = React.useState<boolean>(false)
   const [sortConfig, setSortConfig] = React.useState<{
     key: keyof InventoryItem | null,
     direction: 'ascending' | 'descending' | null
@@ -96,11 +86,9 @@ export default function InventoryPage() {
     if (statusFilter === status) {
       // 如果點擊的是當前已篩選的狀態，則清除篩選
       setStatusFilter("所有狀態");
-      setIsFilterActive(false);
     } else {
       // 否則應用新的篩選
       setStatusFilter(status);
-      setIsFilterActive(true);
     }
   };
   
@@ -109,7 +97,6 @@ export default function InventoryPage() {
     setSearchQuery("");
     setCategoryFilter("所有類別");
     setStatusFilter("所有狀態");
-    setIsFilterActive(false);
   };
   
   // 排序功能
@@ -156,27 +143,33 @@ export default function InventoryPage() {
     // 應用排序
     if (sortConfig.key && sortConfig.direction) {
       filteredData.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
+        if (sortConfig.key === null) return 0;
         
-        if (aValue < bValue) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
+        // 使用非空斷言確保 TypeScript 知道這些值是存在的
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        // 確保值不是 undefined 後再比較
+        if (aValue !== undefined && bValue !== undefined) {
+          if (aValue < bValue) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+          }
+          if (aValue > bValue) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+          }
         }
         return 0;
       });
     }
     
     return filteredData;
-  }, [inventoryData, searchQuery, categoryFilter, statusFilter, sortConfig]);
+  }, [searchQuery, categoryFilter, statusFilter, sortConfig]);
   
   // 獲取所有產品類別（去重）
   const productCategories = React.useMemo(() => {
     const categories = new Set(inventoryData.map(item => item.productCategory));
     return ["所有類別", ...Array.from(categories)];
-  }, [inventoryData]);
+  }, []);
   
   return (
     <SidebarProvider
@@ -284,21 +277,14 @@ export default function InventoryPage() {
                       <SelectItem value="警告">警告</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                  {/* 顯示活躍篩選指示器和清除按鈕，只有在真正有篩選條件時才顯示 */}
-                  {((statusFilter !== "所有狀態" || categoryFilter !== "所有類別" || searchQuery.trim() !== "")) && (
+                  {(searchQuery || categoryFilter !== "所有類別" || statusFilter !== "所有狀態") && (
                     <Button 
-                      variant="outline" 
-                      onClick={clearAllFilters} 
+                      variant="ghost" 
                       size="sm"
-                      className="h-10 px-4 flex items-center"
+                      onClick={clearAllFilters}
+                      className="h-10"
                     >
-                      <span className="mr-1">清除篩選</span>
-                      <span className="h-5 w-5 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground">
-                        {(statusFilter !== "所有狀態" ? 1 : 0) + 
-                         (categoryFilter !== "所有類別" ? 1 : 0) + 
-                         (searchQuery.trim() !== "" ? 1 : 0)}
-                      </span>
+                      清除篩選
                     </Button>
                   )}
                 </div>

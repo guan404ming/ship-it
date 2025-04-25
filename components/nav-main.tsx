@@ -1,8 +1,7 @@
 "use client"
 
-import { IconCirclePlusFilled, IconFileImport, type Icon } from "@tabler/icons-react"
+import { IconFileImport, type Icon } from "@tabler/icons-react"
 
-import { Button } from "@/components/ui/button"
 import {
   SidebarGroup,
   SidebarGroupContent,

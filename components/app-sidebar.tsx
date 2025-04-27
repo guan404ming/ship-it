@@ -6,6 +6,7 @@ import {
   IconDatabase,
   IconFileImport,
   IconFolder,
+  IconHome,
   IconInnerShadowTop,
   IconSettings,
 } from "@tabler/icons-react";
@@ -27,9 +28,14 @@ const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    avatar: "w.png",
   },
   navMain: [
+    {
+      title: "首頁",
+      url: "/",
+      icon: IconHome,
+    },
     {
       title: "資料匯入",
       url: "/upload",

@@ -35,6 +35,44 @@ export type Database = {
           },
         ]
       }
+      product_models: {
+        Row: {
+          created_at: string | null
+          model_id: number
+          model_name: string
+          original_price: number
+          product_id: number
+          promo_price: number | null
+          sku: string
+        }
+        Insert: {
+          created_at?: string | null
+          model_id?: number
+          model_name: string
+          original_price: number
+          product_id: number
+          promo_price?: number | null
+          sku: string
+        }
+        Update: {
+          created_at?: string | null
+          model_id?: number
+          model_name?: string
+          original_price?: number
+          product_id?: number
+          promo_price?: number | null
+          sku?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_product_model"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: number

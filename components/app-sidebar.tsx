@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   IconChartBar,
   IconDatabase,
+  IconFileImport,
   IconFolder,
   IconInnerShadowTop,
   IconSettings,
@@ -29,6 +30,11 @@ const data = {
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
+    {
+      title: "資料匯入",
+      url: "/upload",
+      icon: IconFileImport,
+    },
     {
       title: "我的庫存",
       url: "/inventory",

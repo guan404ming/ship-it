@@ -2,25 +2,15 @@
 
 import * as React from "react";
 import {
-  IconCamera,
   IconChartBar,
-  IconDashboard,
   IconDatabase,
-  IconFileAi,
-  IconFileDescription,
   IconFileImport,
-  IconFileWord,
   IconFolder,
-  IconHelp,
+  IconHome,
   IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
   IconSettings,
-  IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
@@ -38,9 +28,19 @@ const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    avatar: "w.png",
   },
   navMain: [
+    {
+      title: "首頁",
+      url: "/",
+      icon: IconHome,
+    },
+    {
+      title: "資料匯入",
+      url: "/upload",
+      icon: IconFileImport,
+    },
     {
       title: "我的庫存",
       url: "/inventory",

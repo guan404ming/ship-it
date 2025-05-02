@@ -3,8 +3,8 @@
 import * as React from "react";
 import { IconMinus, IconPlus } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { Input } from "./input";
-import { Button } from "./button";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 
 export interface NumberInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "defaultValue"> {

@@ -35,7 +35,6 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       allowNegative = true,
       controls = true,
       controlsPosition = "both",
-      controlsSize = "sm",
       disabled,
       ...props
     },
@@ -50,7 +49,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       if (value !== undefined && value !== internalValue) {
         setInternalValue(value);
       }
-    }, [value]);
+    }, [value, internalValue]); // 修復依賴項警告
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const rawValue = event.target.value;

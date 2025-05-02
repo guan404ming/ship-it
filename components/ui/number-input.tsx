@@ -3,8 +3,8 @@
 import * as React from "react";
 import { IconMinus, IconPlus } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
+import { Input } from "./input";
+import { Button } from "./button";
 
 export interface NumberInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "defaultValue"> {
@@ -35,6 +35,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       allowNegative = true,
       controls = true,
       controlsPosition = "both",
+      controlsSize = "sm",
       disabled,
       ...props
     },
@@ -114,6 +115,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
           <Button
             type="button"
             variant="outline"
+            size={controlsSize}
             onClick={decrement}
             disabled={disabled || internalValue === min}
             className="rounded-r-none"
@@ -131,7 +133,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           className={cn(
-            "",
+            "text-center",
             controls && controlsPosition === "both" && "rounded-none border-x-0",
             controls && controlsPosition === "right" && "rounded-r-none",
             !controls && "w-full"
@@ -146,6 +148,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
               <Button
                 type="button"
                 variant="outline"
+                size={controlsSize}
                 onClick={increment}
                 disabled={disabled || internalValue === max}
                 className="rounded-bl-none border-b-0 px-2 py-0"
@@ -159,6 +162,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
               <Button
                 type="button"
                 variant="outline"
+                size={controlsSize}
                 onClick={controlsPosition === "both" ? increment : decrement}
                 disabled={disabled || (controlsPosition === "both" ? internalValue === max : internalValue === min)}
                 className={cn(

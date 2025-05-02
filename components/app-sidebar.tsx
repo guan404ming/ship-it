@@ -48,7 +48,7 @@ const data = {
     },
     {
       title: "進貨暫存",
-      url: "#",
+      url: "/purchase-temp",
       icon: IconFolder,
     },
     {

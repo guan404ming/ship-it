@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { LineChart, Line, XAxis, CartesianGrid, Legend } from "recharts"
-import { TrendingUp, Search } from "lucide-react"
+import { Search } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"

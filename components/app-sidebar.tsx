@@ -53,7 +53,7 @@ const data = {
     },
     {
       title: "歷史數據",
-      url: "#",
+      url: "/history",
       icon: IconChartBar,
     },
   ],

@@ -1,3 +1,5 @@
+"use client";
+
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
@@ -6,12 +8,25 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 import data from "./data.json";
-import { getProducts } from "@/actions/products";
+import { useSession } from "next-auth/react";
+import { LoginForm } from "@/components/login-form";
+import { Skeleton } from "@/components/ui/skeleton";
+export default function Page() {
+  const { data: session, status } = useSession();
+  
+  if (status === "loading") {
+    return <Skeleton className="h-svh" />;
+  }
 
-export default async function Page() {
-  const products = await getProducts();
-
-  console.log("products", products);
+  if (!session) {
+    return (
+      <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+        <div className="w-full max-w-sm">
+          <LoginForm />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider

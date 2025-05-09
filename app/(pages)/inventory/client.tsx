@@ -26,26 +26,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Database } from "@/database.types";
 
-interface ProductModel {
-  model_id: number;
-  model_name: string;
-  products: {
-    product_id: number;
-    product_name: string;
-    category_id: number;
+type StockRecord = Database["public"]["Tables"]["stock_records"]["Row"] & {
+  product_models: Database["public"]["Tables"]["product_models"]["Row"] & {
+    products: Database["public"]["Tables"]["products"]["Row"];
   };
-}
+};
 
-interface StockRecord {
-  model_id: number;
-  stock_quantity: number;
-  last_updated: string;
-  product_models: ProductModel;
-}
+// TODO: Implement inventory movements history view
+// type InventoryMovement = Database["public"]["Tables"]["inventory_movements"]["Row"] & {
+//   product_models: Database["public"]["Tables"]["product_models"]["Row"] & {
+//     products: Database["public"]["Tables"]["products"]["Row"];
+//   };
+// };
 
 interface InventoryClientProps {
   initialInventory: StockRecord[];
+  // TODO: Implement inventory movements history view
+  // initialMovements: InventoryMovement[];
 }
 
 export function InventoryClient({ initialInventory }: InventoryClientProps) {
@@ -55,7 +54,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     React.useState<string>("所有類別");
   const [statusFilter, setStatusFilter] = React.useState<string>("所有狀態");
   const [sortConfig, setSortConfig] = React.useState<{
-    key: string | null;
+    key: keyof StockRecord | null;
     direction: "ascending" | "descending" | null;
   }>({
     key: null,
@@ -68,7 +67,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
   const totalItems = initialInventory.length;
   const lowStockItems = initialInventory.filter(
-    (item) => item.stock_quantity < 10
+    (item) => (item.stock_quantity ?? 0) < 10
   ).length;
 
   const handleStatusFilter = (status: string) => {
@@ -85,7 +84,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     setStatusFilter("所有狀態");
   };
 
-  const requestSort = (key: string) => {
+  const requestSort = (key: keyof StockRecord) => {
     let direction: "ascending" | "descending" | null = "ascending";
 
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
@@ -107,10 +106,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
       filteredData = filteredData.filter(
         (item) =>
           item.product_models.products.product_name
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           item.product_models.model_name
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(searchQuery.toLowerCase())
       );
     }
@@ -124,8 +123,8 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
     if (statusFilter !== "所有狀態") {
       filteredData = filteredData.filter((item) => {
-        if (statusFilter === "警告") return item.stock_quantity < 10;
-        if (statusFilter === "充足") return item.stock_quantity >= 10;
+        if (statusFilter === "警告") return (item.stock_quantity ?? 0) < 10;
+        if (statusFilter === "充足") return (item.stock_quantity ?? 0) >= 10;
         return true;
       });
     }
@@ -136,10 +135,12 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
         const bValue = b[sortConfig.key as keyof StockRecord];
 
         if (aValue !== undefined && bValue !== undefined) {
-          if (aValue < bValue) {
+          const a = aValue ?? 0;
+          const b = bValue ?? 0;
+          if (a < b) {
             return sortConfig.direction === "ascending" ? -1 : 1;
           }
-          if (aValue > bValue) {
+          if (a > b) {
             return sortConfig.direction === "ascending" ? 1 : -1;
           }
         }
@@ -154,7 +155,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     const categories = new Set(
       initialInventory.map((item) => item.product_models.products.category_id)
     );
-    return ["所有類別", ...Array.from(categories)];
+    return [
+      "所有類別",
+      ...Array.from(categories).filter((c): c is number => c !== null),
+    ];
   }, [initialInventory]);
 
   return (
@@ -316,43 +320,51 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                             <Checkbox />
                           </TableCell>
                           <TableCell>
-                            {item.product_models.products.product_name}
+                            {item.product_models.products.product_name ?? "-"}
                           </TableCell>
                           <TableCell>
-                            {item.product_models.model_name}
+                            {item.product_models.model_name ?? "-"}
                           </TableCell>
                           <TableCell
                             className={`text-right font-mono ${
-                              item.stock_quantity < 10
+                              (item.stock_quantity ?? 0) < 10
                                 ? "text-[#F27F3D] font-bold"
                                 : ""
                             }`}
                           >
-                            {item.stock_quantity}
+                            {item.stock_quantity ?? 0}
                           </TableCell>
                           <TableCell>
                             <span
                               className={`px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${
-                                item.stock_quantity >= 10
+                                (item.stock_quantity ?? 0) >= 10
                                   ? "bg-green-50 text-green-600 hover:bg-green-100"
                                   : "bg-[#F27F3D]/10 text-[#F27F3D] hover:bg-[#F27F3D]/20"
                               } ${
                                 statusFilter ===
-                                (item.stock_quantity >= 10 ? "充足" : "警告")
+                                ((item.stock_quantity ?? 0) >= 10
+                                  ? "充足"
+                                  : "警告")
                                   ? "ring-2 ring-offset-1"
                                   : ""
                               }`}
                               onClick={() =>
                                 handleStatusFilter(
-                                  item.stock_quantity >= 10 ? "充足" : "警告"
+                                  (item.stock_quantity ?? 0) >= 10
+                                    ? "充足"
+                                    : "警告"
                                 )
                               }
                             >
-                              {item.stock_quantity >= 10 ? "充足" : "警告"}
+                              {(item.stock_quantity ?? 0) >= 10
+                                ? "充足"
+                                : "警告"}
                             </span>
                           </TableCell>
                           <TableCell>
-                            {new Date(item.last_updated).toLocaleString()}
+                            {new Date(
+                              item.last_updated ?? new Date()
+                            ).toLocaleString()}
                           </TableCell>
                         </TableRow>
                       ))}

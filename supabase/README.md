@@ -106,6 +106,7 @@ supabase link
 | Apply pending migrations  | `supabase migration up`             |
 | Reset & replay migrations | `supabase db reset`                 |
 | Push to production        | `supabase db push`                  |
-| List migrations           | `supabase migration list`          |
+| List migrations           | `supabase migration list`           |
+| Push to production        | `supabase db push`                  |
 
 ---

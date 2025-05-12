@@ -182,7 +182,7 @@ function UploadContent() {
                             checked={fileImportType === "batch"}
                           />
                           <Label htmlFor="batch-import" className="ml-2">
-                            批量匯入
+                            銷售匯入
                           </Label>
                         </div>
                         <div className="flex items-center">
@@ -245,7 +245,7 @@ function UploadContent() {
                             checked={manualImportType === "batch"}
                           />
                           <Label htmlFor="batch-manual" className="ml-2">
-                            批量匯入
+                            銷售匯入
                           </Label>
                         </div>
                         <div className="flex items-center">

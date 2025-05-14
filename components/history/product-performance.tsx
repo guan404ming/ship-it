@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { LineChart, Line, XAxis, CartesianGrid, Legend } from "recharts"
-import { Search } from "lucide-react"
+import { Search, ExternalLink } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { ProductDetailDialog } from "./product-detail-dialog"
 
 interface ProductSalesData {
   id: string
@@ -49,6 +50,8 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
   const [selectedProducts, setSelectedProducts] = React.useState<string[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [categoryFilter, setCategoryFilter] = React.useState<string>("所有類別")
+  const [detailDialogOpen, setDetailDialogOpen] = React.useState(false)
+  const [selectedProductForDetail, setSelectedProductForDetail] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (isMobile) {
@@ -63,49 +66,97 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
     return ["所有類別", ...Array.from(categories)]
   }, [productSalesData])
 
-  const filteredProducts = React.useMemo(() => {
-    return productSalesData.filter(product => {
-      if (categoryFilter !== "所有類別" && product.productCategory !== categoryFilter) {
-        return false
-      }
-      
-      if (searchQuery) {
-        return product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.productCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.spec.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.vendorCode.toLowerCase().includes(searchQuery.toLowerCase())
-      }
-      
-      return true
-    })
-  }, [searchQuery, categoryFilter, productSalesData])
+  // 過濾商品的邏輯已經移至表格渲染部分，這裡不再需要單獨的 filteredProducts
 
+  // 將商品數據按productName分組
+  const groupedProductsData = React.useMemo(() => {
+    // 1. 按產品名稱進行分組
+    const groupedByName = productSalesData.reduce((acc, product) => {
+      const key = `${product.productName}-${product.productCategory}-${product.vendorCode}`;
+      if (!acc[key]) {
+        acc[key] = {
+          id: key,
+          vendorCode: product.vendorCode,
+          productName: product.productName,
+          productCategory: product.productCategory,
+          models: []
+        };
+      }
+      acc[key].models.push({
+        id: product.id,
+        spec: product.spec,
+        data: product.data
+      });
+      return acc;
+    }, {} as Record<string, {
+      id: string;
+      vendorCode: string;
+      productName: string;
+      productCategory: string;
+      models: Array<{
+        id: string;
+        spec: string;
+        data: Array<{
+          date: string;
+          amount: number;
+          quantity: number;
+        }>;
+      }>;
+    }>);
+
+    // 2. 轉換為陣列形式
+    return Object.values(groupedByName);
+  }, [productSalesData]);
+
+  // 合併相同日期的數據
   const selectedProductsData = React.useMemo(() => {
     if (selectedProducts.length === 0) return []
+
+    const now = new Date("2025-05-01")
+    let daysToSubtract = 90
+    if (timeRange === "30d") {
+      daysToSubtract = 30
+    } else if (timeRange === "7d") {
+      daysToSubtract = 7
+    } else if (timeRange === "180d") {
+      daysToSubtract = 180
+    }
     
-    return productSalesData
+    const startDate = new Date(now)
+    startDate.setDate(startDate.getDate() - daysToSubtract)
+
+    return groupedProductsData
       .filter(product => selectedProducts.includes(product.id))
-      .map(product => ({
-        ...product,
-        filteredData: product.data.filter(item => {
-          const now = new Date("2025-05-01")
-          let daysToSubtract = 90
-          if (timeRange === "30d") {
-            daysToSubtract = 30
-          } else if (timeRange === "7d") {
-            daysToSubtract = 7
-          } else if (timeRange === "180d") {
-            daysToSubtract = 180
-          }
-          
-          const startDate = new Date(now)
-          startDate.setDate(startDate.getDate() - daysToSubtract)
-          
-          const date = new Date(item.date)
-          return date >= startDate
+      .map(product => {
+        // 收集所有型號的數據並按日期合併
+        const dateMap = new Map<string, { date: string, amount: number, quantity: number }>()
+
+        product.models.forEach(model => {
+          model.data
+            .filter(item => new Date(item.date) >= startDate)
+            .forEach(item => {
+              if (dateMap.has(item.date)) {
+                const existing = dateMap.get(item.date)!
+                dateMap.set(item.date, {
+                  date: item.date,
+                  amount: existing.amount + item.amount,
+                  quantity: existing.quantity + item.quantity
+                })
+              } else {
+                dateMap.set(item.date, { ...item })
+              }
+            })
         })
-      }))
-  }, [selectedProducts, timeRange, productSalesData])
+
+        // 將合併後的數據轉為陣列
+        return {
+          ...product,
+          filteredData: Array.from(dateMap.values()).sort((a, b) => 
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+          )
+        }
+      })
+  }, [selectedProducts, timeRange, groupedProductsData])
 
   return (
     <div className="flex flex-col gap-4">
@@ -179,16 +230,39 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.length === 0 ? (
+            {groupedProductsData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
                   無符合條件的商品
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProducts.map((product) => {
+              groupedProductsData.filter(product => {
+                if (categoryFilter !== "所有類別" && product.productCategory !== categoryFilter) {
+                  return false;
+                }
+                
+                if (searchQuery) {
+                  return product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    product.productCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    product.vendorCode.toLowerCase().includes(searchQuery.toLowerCase());
+                }
+                
+                return true;
+              }).map((product) => {
                 const isSelected = selectedProducts.includes(product.id);
-                const latestData = product.data[product.data.length - 1];
+                // 計算產品所有規格的數據總和
+                const totalLatestQuantity = product.models.reduce((sum, model) => {
+                  const modelLatestData = model.data[model.data.length - 1];
+                  return sum + modelLatestData.quantity;
+                }, 0);
+                
+                const totalLatestAmount = product.models.reduce((sum, model) => {
+                  const modelLatestData = model.data[model.data.length - 1];
+                  return sum + modelLatestData.amount;
+                }, 0);
+                
+                const modelsCount = product.models.length;
                 
                 return (
                   <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
@@ -207,13 +281,29 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                     </TableCell>
                     <TableCell>{product.vendorCode}</TableCell>
                     <TableCell>{product.productCategory}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.spec}</TableCell>
+                    <TableCell className="flex items-center gap-2">
+                      {product.productName}
+                      {modelsCount > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => {
+                            setSelectedProductForDetail(product.id);
+                            setDetailDialogOpen(true);
+                          }}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                          查看 {modelsCount} 種規格
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>{modelsCount} 種規格</TableCell>
                     <TableCell className="text-right font-mono">
-                      {latestData.quantity}
+                      {totalLatestQuantity}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      $ {latestData.amount.toLocaleString()}
+                      $ {totalLatestAmount.toLocaleString()}
                     </TableCell>
                   </TableRow>
                 )
@@ -221,9 +311,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
             )}
           </TableBody>
         </Table>
-      </div>
-
-      {selectedProducts.length > 0 && (
+      </div>        {selectedProducts.length > 0 && (
         <div className="mt-6">
           <Card className="border shadow-sm @container/card">
             <CardHeader>
@@ -231,7 +319,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                 <div>
                   <CardTitle>商品銷售表現</CardTitle>
                   <CardDescription>
-                    已選取 {selectedProducts.length} 個商品
+                    已選取 {selectedProducts.length} 個商品（所有規格加總）
                   </CardDescription>
                 </div>
                 <div className="flex items-center">
@@ -314,7 +402,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                         type="monotone"
                         dataKey={chartType}
                         stroke={color}
-                        name={`${product.productName} (${product.spec})`}
+                        name={product.productName}
                         strokeWidth={2}
                       />
                     );
@@ -324,6 +412,18 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
             </CardContent>
           </Card>
         </div>
+      )}
+      
+      {/* 詳細規格比較對話框 */}
+      {selectedProductForDetail && (
+        <ProductDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          productName={groupedProductsData.find(p => p.id === selectedProductForDetail)?.productName || ""}
+          productCategory={groupedProductsData.find(p => p.id === selectedProductForDetail)?.productCategory || ""}
+          vendorCode={groupedProductsData.find(p => p.id === selectedProductForDetail)?.vendorCode || ""}
+          models={groupedProductsData.find(p => p.id === selectedProductForDetail)?.models || []}
+        />
       )}
 
       <div className="mt-6">

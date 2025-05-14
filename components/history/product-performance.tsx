@@ -14,6 +14,15 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ProductDetailDialog } from "./product-detail-dialog"
+import { 
+  getDateRange as getDateRangeUtil
+} from "@/lib/date-utils"
+import { 
+  GroupedProduct, 
+  SalesData,
+  getProductDateRangeData, 
+  calculateProductGrowthRates 
+} from "@/lib/product-utils"
 
 interface ProductSalesData {
   id: string
@@ -21,11 +30,7 @@ interface ProductSalesData {
   productName: string
   productCategory: string
   spec: string
-  data: Array<{
-    date: string
-    amount: number
-    quantity: number
-  }>
+  data: SalesData[]
 }
 
 interface ProductPerformanceProps {
@@ -87,118 +92,33 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
         data: product.data
       });
       return acc;
-    }, {} as Record<string, {
-      id: string;
-      vendorCode: string;
-      productName: string;
-      productCategory: string;
-      models: Array<{
-        id: string;
-        spec: string;
-        data: Array<{
-          date: string;
-          amount: number;
-          quantity: number;
-        }>;
-      }>;
-    }>);
+    }, {} as Record<string, GroupedProduct>);
 
     // 2. 轉換為陣列形式
     return Object.values(groupedByName);
   }, [productSalesData]);
 
-  // 產品類型定義
-  type GroupedProduct = {
-    id: string;
-    vendorCode: string;
-    productName: string;
-    productCategory: string;
-    models: Array<{
-      id: string;
-      spec: string;
-      data: Array<{
-        date: string;
-        amount: number;
-        quantity: number;
-      }>;
-    }>;
-  };
-
-  // 獲取指定日期範圍的銷售數據
-  const getDateRangeData = React.useCallback((product: GroupedProduct, startDate: Date, endDate: Date) => {
-    // 收集所有型號的數據並按日期合併
-    const dateMap = new Map<string, { date: string, amount: number, quantity: number }>()
-
-    product.models.forEach(model => {
-      model.data
-        .filter(item => {
-          const itemDate = new Date(item.date)
-          return itemDate >= startDate && itemDate <= endDate
-        })
-        .forEach(item => {
-          if (dateMap.has(item.date)) {
-            const existing = dateMap.get(item.date)!
-            dateMap.set(item.date, {
-              date: item.date,
-              amount: existing.amount + item.amount,
-              quantity: existing.quantity + item.quantity
-            })
-          } else {
-            dateMap.set(item.date, { ...item })
-          }
-        })
-    })
-
-    // 將合併後的數據轉為陣列
-    return Array.from(dateMap.values()).sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    )
-  }, [])
-
   // 計算日期範圍
   const getDateRange = React.useCallback(() => {
-    const now = new Date("2025-05-01")
-    let startDate: Date
-    let endDate = new Date(now)
-    
-    if (customDateRange) {
-      startDate = new Date(customDateRange.start)
-      endDate = new Date(customDateRange.end)
-    } else {
-      let daysToSubtract = 90
-      if (timeRange === "30d") {
-        daysToSubtract = 30
-      } else if (timeRange === "7d") {
-        daysToSubtract = 7
-      } else if (timeRange === "180d") {
-        daysToSubtract = 180
-      } else if (timeRange === "all") {
-        // 所有時間 - 使用最早的日期
-        daysToSubtract = 365 * 2 // 假設最多兩年資料
-      }
-      
-      startDate = new Date(now)
-      startDate.setDate(startDate.getDate() - daysToSubtract)
-    }
-    
-    return { startDate, endDate }
-  }, [timeRange, customDateRange])
+    const now = new Date("2025-05-01");
+    return getDateRangeUtil(timeRange, customDateRange, now);
+  }, [timeRange, customDateRange]);
 
   // 合併相同日期的數據
   const selectedProductsData = React.useMemo(() => {
-    if (selectedProducts.length === 0) return []
+    if (selectedProducts.length === 0) return [];
 
-    const { startDate, endDate } = getDateRange()
+    const { startDate, endDate } = getDateRange();
 
     return groupedProductsData
       .filter(product => selectedProducts.includes(product.id))
       .map(product => {
         return {
           ...product,
-          filteredData: getDateRangeData(product, startDate, endDate)
+          filteredData: getProductDateRangeData(product, startDate, endDate)
         }
-      })
-  }, [selectedProducts, groupedProductsData, getDateRange, getDateRangeData])
+      });
+  }, [selectedProducts, groupedProductsData, getDateRange]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -335,8 +255,8 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                   <TableHead>產品分類</TableHead>
                   <TableHead>產品名稱</TableHead>
                   <TableHead>規格</TableHead>
-                  <TableHead className="text-right">期間銷售量</TableHead>
-                  <TableHead className="text-right">期間銷售額</TableHead>
+                  <TableHead className="text-right">期間銷售量 (成長率)</TableHead>
+                  <TableHead className="text-right">期間銷售額 (成長率)</TableHead>
                 </TableRow>
               </TableHeader>
           <TableBody>
@@ -364,10 +284,17 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                 const { startDate, endDate } = getDateRange();
                 
                 // 計算所選時間範圍內產品所有規格的數據總和
-                const salesData = getDateRangeData(product, startDate, endDate);
+                const salesData = getProductDateRangeData(product, startDate, endDate);
                 
                 const totalQuantity = salesData.reduce((sum, item) => sum + item.quantity, 0);
                 const totalAmount = salesData.reduce((sum, item) => sum + item.amount, 0);
+
+                // 使用工具函數計算成長率
+                const { quantityGrowth, amountGrowth } = calculateProductGrowthRates(
+                  product, 
+                  timeRange, 
+                  customDateRange
+                );
                 
                 const modelsCount = product.models.length;
                 
@@ -407,10 +334,28 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                     </TableCell>
                     <TableCell>{modelsCount} 種規格</TableCell>
                     <TableCell className="text-right font-mono">
-                      {totalQuantity}
+                      <div className="flex items-center justify-end">
+                        <span>{totalQuantity}</span>
+                        {quantityGrowth !== undefined && (
+                          <span 
+                            className={`ml-2 text-xs ${quantityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                          >
+                            {quantityGrowth >= 0 ? '↑' : '↓'} {Math.abs(quantityGrowth)}%
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      $ {totalAmount.toLocaleString()}
+                      <div className="flex items-center justify-end">
+                        <span>$ {totalAmount.toLocaleString()}</span>
+                        {amountGrowth !== undefined && (
+                          <span 
+                            className={`ml-2 text-xs ${amountGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                          >
+                            {amountGrowth >= 0 ? '↑' : '↓'} {Math.abs(amountGrowth)}%
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

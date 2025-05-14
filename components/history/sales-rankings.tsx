@@ -11,10 +11,10 @@ import { getDateRange as getDateRangeUtil, calculateGrowthRate } from "@/lib/dat
 
 interface RankingProduct {
   id: string
-  vendorCode: string
-  productName: string
-  productCategory: string
-  spec: string
+  sku: string // Changed from vendorCode to align with database
+  product_name: string // Changed from productName to align with database
+  category_name: string // Changed from productCategory to align with database
+  model_name: string // Changed from spec to align with database
   sales: number
   quantity?: number
   growth?: number
@@ -47,7 +47,7 @@ function calculatePeriodTotals(
     if (!p.date) return false;
     const date = new Date(p.date);
     return date >= currentPeriodStart && date <= currentPeriodEnd &&
-           `${p.vendorCode}-${p.productName}-${p.productCategory}` === key;
+           `${p.sku}-${p.product_name}-${p.category_name}` === key;
   });
   
   // 篩選前一期間產品
@@ -55,7 +55,7 @@ function calculatePeriodTotals(
     if (!p.date) return false;
     const date = new Date(p.date);
     return date >= previousPeriodStart && date <= previousPeriodEnd &&
-           `${p.vendorCode}-${p.productName}-${p.productCategory}` === key;
+           `${p.sku}-${p.product_name}-${p.category_name}` === key;
   });
   
   // 計算當前期間總和
@@ -142,9 +142,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
     // 按產品聚合
     const aggregatedMap = new Map<string, {
       id: string,
-      vendorCode: string,
-      productName: string,
-      productCategory: string,
+      sku: string,
+      product_name: string,
+      category_name: string,
       sales: number,
       quantity: number,
       salesGrowth?: number,
@@ -154,7 +154,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
 
     filteredData.forEach(product => {
       // 創建唯一鍵，忽略規格
-      const key = `${product.vendorCode}-${product.productName}-${product.productCategory}`;
+      const key = `${product.sku}-${product.product_name}-${product.category_name}`;
       
       // 計算兩個時間段的總和
       const totals = calculatePeriodTotals(
@@ -183,9 +183,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
       } else {
         aggregatedMap.set(key, {
           id: key,
-          vendorCode: product.vendorCode,
-          productName: product.productName,
-          productCategory: product.productCategory,
+          sku: product.sku,
+          product_name: product.product_name,
+          category_name: product.category_name,
           sales: product.sales,
           quantity: product.quantity || 0,
           specifications: 1,
@@ -355,9 +355,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -398,9 +398,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -441,9 +441,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -480,9 +480,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 

@@ -28,12 +28,12 @@ interface ModelItem {
 interface PurchaseItem {
   id: number;
   isVisible: boolean;
-  productName: string;
+  product_name: string; // Changed from productName to align with database
   quantity: number;
-  modelId?: number;
-  productId?: number;
+  model_id?: number; // Changed from modelId to align with database
+  product_id?: number; // Changed from productId to align with database
   models: ModelItem[]; 
-  notes?: string;
+  note?: string; // Changed from notes to align with database
 }
 
 interface PurchaseImportDialogProps {
@@ -113,7 +113,7 @@ const ProductCard = ({
               <Input 
                 placeholder="輸入商品名稱" 
                 className="w-100"
-                value={item.productName}
+                value={item.product_name}
                 onChange={(e) => onProductNameChange(e.target.value)}
               />
               {item.models.length > 0 && (
@@ -202,8 +202,8 @@ export function PurchaseImportDialog({
 }: PurchaseImportDialogProps) {
   const router = useRouter();
   const [orderItems, setOrderItems] = React.useState<PurchaseItem[]>([
-    { id: 1, isVisible: true, productName: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
-    { id: 2, isVisible: true, productName: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+    { id: 1, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+    { id: 2, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
   ]);
   const [totalItems, setTotalItems] = React.useState(2);
   const [totalQuantity, setTotalQuantity] = React.useState(100);
@@ -226,7 +226,7 @@ export function PurchaseImportDialog({
       { 
         id: newId, 
         isVisible: true, 
-        productName: "", 
+        product_name: "", 
         quantity: 0, 
         models: [{ id: 1, name: "", quantity: 1 }], // 預設一個型號
       },
@@ -241,7 +241,7 @@ export function PurchaseImportDialog({
   const handleProductNameChange = (id: number, value: string) => {
     setOrderItems(
       orderItems.map((item) =>
-        item.id === id ? { ...item, productName: value } : item
+        item.id === id ? { ...item, product_name: value } : item
       )
     );
   };
@@ -332,7 +332,7 @@ export function PurchaseImportDialog({
       return;
     }
     
-    if (orderItems.some(item => !item.productName)) {
+    if (orderItems.some(item => !item.product_name)) {
       alert("請確保所有商品都填寫了商品名稱");
       return;
     }
@@ -367,7 +367,7 @@ export function PurchaseImportDialog({
       const batch = await createPurchaseBatch(supplierId);
       
       for (const item of orderItems) {
-        console.log(`Processing product: ${item.productName} with ${item.models.length} models`);
+        console.log(`Processing product: ${item.product_name} with ${item.models.length} models`);
         
         for (const model of item.models) {
           const modelId = Math.floor(Math.random() * 10000); // 模擬生成 modelId
@@ -394,7 +394,7 @@ export function PurchaseImportDialog({
 
   const getUniqueProductCount = () => {
     return new Set(
-      orderItems.map((item) => item.productName).filter(name => name !== "")
+      orderItems.map((item) => item.product_name).filter(name => name !== "")
     ).size;
   };
 

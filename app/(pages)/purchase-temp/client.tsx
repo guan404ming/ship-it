@@ -35,90 +35,90 @@ import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 
 type PurchaseOrderItem = {
   id: string;
-  orderNumber: string;
-  vendorCode: string;
-  productCategory: string;
-  productName: string;
-  spec: string;
+  batch_id: string; // Changed from orderNumber to align with database
+  supplier_name: string; // Changed from vendorCode to align with database
+  category_name: string; // Changed from productCategory to align with database
+  product_name: string; // Changed from productName to align with database
+  model_name: string; // Changed from spec to align with database
   quantity: number;
-  totalPrice: number;
-  orderDate: string;
-  expectedArrivalDate: string;
+  unit_cost: number; // Changed from totalPrice to align with database
+  created_at: string; // Changed from orderDate to align with database
+  expected_arrival: string; // Changed from expectedArrivalDate to align with database (custom field)
   note?: string;
 };
 
 const purchaseOrderData: PurchaseOrderItem[] = [
   {
     id: "1",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "長頸鹿款",
+    batch_id: "PO2023001",
+    supplier_name: "fju3299",
+    category_name: "兒童玩具",
+    product_name: "拼圖",
+    model_name: "長頸鹿款",
     quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
+    unit_cost: 10000,
+    created_at: "2025-05-15",
+    expected_arrival: "2025-05-30",
   },
   {
     id: "2",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "海豚款",
+    batch_id: "PO2023001",
+    supplier_name: "fju3299",
+    category_name: "兒童玩具",
+    product_name: "拼圖",
+    model_name: "海豚款",
     quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
+    unit_cost: 10000,
+    created_at: "2025-05-15",
+    expected_arrival: "2025-05-30",
   },
   {
     id: "3",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "海豚款",
+    batch_id: "PO2023001",
+    supplier_name: "fju3299",
+    category_name: "兒童玩具",
+    product_name: "拼圖",
+    model_name: "海豚款",
     quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
+    unit_cost: 10000,
+    created_at: "2025-05-15",
+    expected_arrival: "2025-05-30",
   },
   {
     id: "4",
-    orderNumber: "PO2023001",
-    vendorCode: "jde2088",
-    productCategory: "服飾",
-    productName: "兒童外套",
-    spec: "黑色",
+    batch_id: "PO2023001",
+    supplier_name: "jde2088",
+    category_name: "服飾",
+    product_name: "兒童外套",
+    model_name: "黑色",
     quantity: 110,
-    totalPrice: 5000,
-    orderDate: "2025-04-29",
-    expectedArrivalDate: "2025-05-10",
+    unit_cost: 5000,
+    created_at: "2025-04-29",
+    expected_arrival: "2025-05-10",
   },
   {
     id: "5",
-    orderNumber: "PO2023001",
-    vendorCode: "jde2088",
-    productCategory: "服飾",
-    productName: "兒童外套",
-    spec: "粉色",
+    batch_id: "PO2023001",
+    supplier_name: "jde2088",
+    category_name: "服飾",
+    product_name: "兒童外套",
+    model_name: "粉色",
     quantity: 100,
-    totalPrice: 6000,
-    orderDate: "2025-04-29",
-    expectedArrivalDate: "2025-05-10",
+    unit_cost: 6000,
+    created_at: "2025-04-29",
+    expected_arrival: "2025-05-10",
   },
   {
     id: "6",
-    orderNumber: "PO2023001",
-    vendorCode: "kk7655",
-    productCategory: "裝飾品",
-    productName: "聖誕裝飾",
-    spec: "星星",
+    batch_id: "PO2023001",
+    supplier_name: "kk7655",
+    category_name: "裝飾品",
+    product_name: "聖誕裝飾",
+    model_name: "星星",
     quantity: 50,
-    totalPrice: 2000,
-    orderDate: "2025-04-11",
-    expectedArrivalDate: "2025-05-10",
+    unit_cost: 2000,
+    created_at: "2025-04-11",
+    expected_arrival: "2025-05-10",
   },
 ];
 
@@ -132,7 +132,7 @@ export default function PurchaseTempClient() {
     setIsDialogOpen(true);
   };
 
-  const totalOrders = new Set(purchaseOrderData.map((item) => item.orderNumber))
+  const totalOrders = new Set(purchaseOrderData.map((item) => item.batch_id))
     .size;
   const totalItems = purchaseOrderData.length;
 
@@ -147,16 +147,16 @@ export default function PurchaseTempClient() {
     if (searchQuery) {
       filtered = filtered.filter(
         (item) =>
-          item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.vendorCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.spec.toLowerCase().includes(searchQuery.toLowerCase())
+          item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.batch_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.model_name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     if (categoryFilter !== "所有規則") {
       filtered = filtered.filter(
-        (item) => item.productCategory === categoryFilter
+        (item) => item.category_name === categoryFilter
       );
     }
 
@@ -165,7 +165,7 @@ export default function PurchaseTempClient() {
 
   const productCategories = React.useMemo(() => {
     const categories = new Set(
-      purchaseOrderData.map((item) => item.productCategory)
+      purchaseOrderData.map((item) => item.category_name)
     );
     return ["所有規則", ...Array.from(categories)];
   }, []);
@@ -291,7 +291,7 @@ export default function PurchaseTempClient() {
                         <TableHead>產品名稱</TableHead>
                         <TableHead>規格</TableHead>
                         <TableHead className="text-right">數量</TableHead>
-                        <TableHead className="text-right">總價</TableHead>
+                        <TableHead className="text-right">單價</TableHead>
                         <TableHead>叫貨日期</TableHead>
                         <TableHead>預計到貨日</TableHead>
                         <TableHead>備註</TableHead>
@@ -303,19 +303,19 @@ export default function PurchaseTempClient() {
                           <TableCell>
                             <Checkbox />
                           </TableCell>
-                          <TableCell>{item.orderNumber}</TableCell>
-                          <TableCell>{item.vendorCode}</TableCell>
-                          <TableCell>{item.productCategory}</TableCell>
-                          <TableCell>{item.productName}</TableCell>
-                          <TableCell>{item.spec}</TableCell>
+                          <TableCell>{item.batch_id}</TableCell>
+                          <TableCell>{item.supplier_name}</TableCell>
+                          <TableCell>{item.category_name}</TableCell>
+                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell>{item.model_name}</TableCell>
                           <TableCell className="text-right font-mono">
                             {item.quantity}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {item.totalPrice}
+                            {item.unit_cost}
                           </TableCell>
-                          <TableCell>{item.orderDate}</TableCell>
-                          <TableCell>{item.expectedArrivalDate}</TableCell>
+                          <TableCell>{item.created_at}</TableCell>
+                          <TableCell>{item.expected_arrival}</TableCell>
                           <TableCell>{item.note || "-"}</TableCell>
                         </TableRow>
                       ))}

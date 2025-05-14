@@ -26,10 +26,10 @@ import {
 
 interface ProductSalesData {
   id: string
-  vendorCode: string
-  productName: string
-  productCategory: string
-  spec: string
+  sku: string // Changed from vendorCode to align with database
+  product_name: string // Changed from productName to align with database
+  category_name: string // Changed from productCategory to align with database
+  model_name: string // Changed from spec to align with database
   data: SalesData[]
 }
 
@@ -67,7 +67,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
 
   const productCategories = React.useMemo(() => {
     const categories = new Set(
-      productSalesData.map((item) => item.productCategory)
+      productSalesData.map((item) => item.category_name)
     )
     return ["所有類別", ...Array.from(categories)]
   }, [productSalesData])
@@ -76,19 +76,19 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
   const groupedProductsData = React.useMemo(() => {
     // 1. 按產品名稱進行分組
     const groupedByName = productSalesData.reduce((acc, product) => {
-      const key = `${product.productName}-${product.productCategory}-${product.vendorCode}`;
+      const key = `${product.product_name}-${product.category_name}-${product.sku}`;
       if (!acc[key]) {
         acc[key] = {
           id: key,
-          vendorCode: product.vendorCode,
-          productName: product.productName,
-          productCategory: product.productCategory,
+          sku: product.sku, // Changed from vendorCode
+          product_name: product.product_name, // Changed from productName
+          category_name: product.category_name, // Changed from productCategory
           models: []
         };
       }
       acc[key].models.push({
         id: product.id,
-        spec: product.spec,
+        model_name: product.model_name, // Changed from spec
         data: product.data
       });
       return acc;
@@ -236,29 +236,30 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
 
       {/* 商品數據表格 */}
       <div className="rounded-lg border">
-        <Table><TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      id="product-table-all"
-                      checked={selectedProducts.length === groupedProductsData.length}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedProducts(groupedProductsData.map(product => product.id));
-                        } else {
-                          setSelectedProducts([]);
-                        }
-                      }}
-                    />
-                  </TableHead>
-                  <TableHead>廠商代碼</TableHead>
-                  <TableHead>產品分類</TableHead>
-                  <TableHead>產品名稱</TableHead>
-                  <TableHead>規格</TableHead>
-                  <TableHead className="text-right">期間銷售量 (成長率)</TableHead>
-                  <TableHead className="text-right">期間銷售額 (成長率)</TableHead>
-                </TableRow>
-              </TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  id="product-table-all"
+                  checked={selectedProducts.length === groupedProductsData.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedProducts(groupedProductsData.map(product => product.id));
+                    } else {
+                      setSelectedProducts([]);
+                    }
+                  }}
+                />
+              </TableHead>
+              <TableHead>廠商代碼</TableHead>
+              <TableHead>產品分類</TableHead>
+              <TableHead>產品名稱</TableHead>
+              <TableHead>規格</TableHead>
+              <TableHead className="text-right">期間銷售量 (成長率)</TableHead>
+              <TableHead className="text-right">期間銷售額 (成長率)</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {groupedProductsData.length === 0 ? (
               <TableRow>
@@ -268,14 +269,14 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
               </TableRow>
             ) : (
               groupedProductsData.filter(product => {
-                if (categoryFilter !== "所有類別" && product.productCategory !== categoryFilter) {
+                if (categoryFilter !== "所有類別" && product.category_name !== categoryFilter) {
                   return false;
                 }
                 
                 if (searchQuery) {
-                  return product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    product.productCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    product.vendorCode.toLowerCase().includes(searchQuery.toLowerCase());
+                  return product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    product.category_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    product.sku.toLowerCase().includes(searchQuery.toLowerCase());
                 }
                 
                 return true;
@@ -313,10 +314,10 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                         }}
                       />
                     </TableCell>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell className="flex items-center gap-2">
-                      {product.productName}
+                      {product.product_name}
                       {modelsCount > 1 && (
                         <Button
                           variant="ghost"
@@ -439,7 +440,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                         type="monotone"
                         dataKey={chartType}
                         stroke={color}
-                        name={product.productName}
+                        name={product.product_name}
                         strokeWidth={2}
                       />
                     );
@@ -456,9 +457,9 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
         <ProductDetailDialog
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
-          productName={groupedProductsData.find(p => p.id === selectedProductForDetail)?.productName || ""}
-          productCategory={groupedProductsData.find(p => p.id === selectedProductForDetail)?.productCategory || ""}
-          vendorCode={groupedProductsData.find(p => p.id === selectedProductForDetail)?.vendorCode || ""}
+          product_name={groupedProductsData.find(p => p.id === selectedProductForDetail)?.product_name || ""}
+          category_name={groupedProductsData.find(p => p.id === selectedProductForDetail)?.category_name || ""}
+          sku={groupedProductsData.find(p => p.id === selectedProductForDetail)?.sku || ""}
           models={groupedProductsData.find(p => p.id === selectedProductForDetail)?.models || []}
         />
       )}

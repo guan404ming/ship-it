@@ -12,15 +12,15 @@ export interface SalesData {
 
 export interface ProductModel {
   id: string;
-  spec: string;
+  model_name: string; // Changed from spec to align with database
   data: SalesData[];
 }
 
 export interface GroupedProduct {
   id: string;
-  vendorCode: string;
-  productName: string;
-  productCategory: string;
+  sku: string; // Changed from vendorCode to align with database
+  product_name: string; // Changed from productName to align with database
+  category_name: string; // Changed from productCategory to align with database
   models: ProductModel[];
 }
 

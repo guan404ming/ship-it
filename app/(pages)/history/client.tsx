@@ -43,10 +43,10 @@ const salesData = [
 const productRankingData = [
   {
     id: "1",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "長頸鹿款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "長頸鹿款", // Changed from spec
     sales: 1840,
     quantity: 46,
     growth: 7.0,  // (1840-1720)/1720 ≈ 7.0%
@@ -54,10 +54,10 @@ const productRankingData = [
   },
   {
     id: "2",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "海豚款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "海豚款", // Changed from spec
     sales: 1400,
     quantity: 35,
     growth: 6.1,  // (1400-1320)/1320 ≈ 6.1%
@@ -65,10 +65,10 @@ const productRankingData = [
   },
   {
     id: "3",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "粉色",
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "粉色", // Changed from spec
     sales: 2940,
     quantity: 49,
     growth: 14.0, // (2940-2580)/2580 ≈ 14.0%
@@ -76,10 +76,10 @@ const productRankingData = [
   },
   {
     id: "4",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "黑色",
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "黑色", // Changed from spec
     sales: 1740,
     quantity: 29,
     growth: 16.0, // (1740-1500)/1500 = 16.0%
@@ -87,10 +87,10 @@ const productRankingData = [
   },
   {
     id: "5",
-    vendorCode: "hkl5511",
-    productName: "積木",
-    productCategory: "兒童玩具",
-    spec: "恐龍系列",
+    sku: "hkl5511", // Changed from vendorCode
+    product_name: "積木", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "恐龍系列", // Changed from spec
     sales: 2100,
     quantity: 42,
     growth: 8.2,  // (2100-1940)/1940 ≈ 8.2%
@@ -98,10 +98,10 @@ const productRankingData = [
   },
   {
     id: "6",
-    vendorCode: "hkl5511",
-    productName: "積木",
-    productCategory: "兒童玩具",
-    spec: "城市系列",
+    sku: "hkl5511", // Changed from vendorCode
+    product_name: "積木", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "城市系列", // Changed from spec
     sales: 1950,
     quantity: 39,
     growth: 8.3,  // (1950-1800)/1800 ≈ 8.3%
@@ -109,10 +109,10 @@ const productRankingData = [
   },
   {
     id: "7",
-    vendorCode: "pqr7722",
-    productName: "兒童書包",
-    productCategory: "配件",
-    spec: "藍色",
+    sku: "pqr7722", // Changed from vendorCode
+    product_name: "兒童書包", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "藍色", // Changed from spec
     sales: 1250,
     quantity: 25,
     growth: 0.8,  // (1250-1240)/1240 ≈ 0.8%
@@ -120,10 +120,10 @@ const productRankingData = [
   },
   {
     id: "8",
-    vendorCode: "pqr7722",
-    productName: "兒童書包",
-    productCategory: "配件",
-    spec: "粉紅色",
+    sku: "pqr7722", // Changed from vendorCode
+    product_name: "兒童書包", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "粉紅色", // Changed from spec
     sales: 1480,
     quantity: 29,
     growth: 2.1,  // (1480-1450)/1450 ≈ 2.1%
@@ -131,10 +131,10 @@ const productRankingData = [
   },
   {
     id: "9",
-    vendorCode: "xyz9900",
-    productName: "兒童水壺",
-    productCategory: "生活用品",
-    spec: "350ml",
+    sku: "xyz9900", // Changed from vendorCode
+    product_name: "兒童水壺", // Changed from productName
+    category_name: "生活用品", // Changed from productCategory
+    model_name: "350ml", // Changed from spec
     sales: 950,
     quantity: 19,
     growth: -3.5, // Estimated based on trend
@@ -142,10 +142,10 @@ const productRankingData = [
   },
   {
     id: "10",
-    vendorCode: "xyz9900",
-    productName: "兒童水壺",
-    productCategory: "生活用品",
-    spec: "500ml",
+    sku: "xyz9900", // Changed from vendorCode
+    product_name: "兒童水壺", // Changed from productName
+    category_name: "生活用品", // Changed from productCategory
+    model_name: "500ml", // Changed from spec
     sales: 1050,
     quantity: 21,
     growth: -1.0, // Estimated based on trend
@@ -153,10 +153,10 @@ const productRankingData = [
   },
   {
     id: "11",
-    vendorCode: "abc1234",
-    productName: "兒童帽子",
-    productCategory: "配件",
-    spec: "藍色",
+    sku: "abc1234", // Changed from vendorCode
+    product_name: "兒童帽子", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "藍色", // Changed from spec
     sales: 780,
     quantity: 39,
     growth: -5.1, // Estimated based on trend
@@ -164,10 +164,10 @@ const productRankingData = [
   },
   {
     id: "12",
-    vendorCode: "def5678",
-    productName: "兒童雨靴",
-    productCategory: "鞋類",
-    spec: "恐龍圖案",
+    sku: "def5678", // Changed from vendorCode
+    product_name: "兒童雨靴", // Changed from productName
+    category_name: "鞋類", // Changed from productCategory
+    model_name: "恐龍圖案", // Changed from spec
     sales: 1320,
     quantity: 22,
     growth: 3.9, // Estimated based on trend
@@ -176,10 +176,10 @@ const productRankingData = [
   // Adding historical data points for time range filtering
   {
     id: "1-apr",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "長頸鹿款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "長頸鹿款", // Changed from spec
     sales: 1720,
     quantity: 43,
     growth: 4.9,  // (1720-1640)/1640 ≈ 4.9%
@@ -187,10 +187,10 @@ const productRankingData = [
   },
   {
     id: "2-apr",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "海豚款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "海豚款", // Changed from spec
     sales: 1320,
     quantity: 33,
     growth: 6.5,  // (1320-1240)/1240 ≈ 6.5%
@@ -198,10 +198,10 @@ const productRankingData = [
   },
   {
     id: "1-mar",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "長頸鹿款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "長頸鹿款", // Changed from spec
     sales: 1640,
     quantity: 41,
     growth: 12.3, // (1640-1460)/1460 ≈ 12.3%
@@ -209,10 +209,10 @@ const productRankingData = [
   },
   {
     id: "2-mar",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "海豚款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "海豚款", // Changed from spec
     sales: 1240,
     quantity: 31,
     growth: 14.8, // (1240-1080)/1080 ≈ 14.8%
@@ -220,10 +220,10 @@ const productRankingData = [
   },
   {
     id: "1-feb",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "長頸鹿款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "長頸鹿款", // Changed from spec
     sales: 1460,
     quantity: 36,
     growth: 10.6, // (1460-1320)/1320 ≈ 10.6%
@@ -231,10 +231,10 @@ const productRankingData = [
   },
   {
     id: "2-feb",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "海豚款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "海豚款", // Changed from spec
     sales: 1080,
     quantity: 27,
     growth: 20.0, // (1080-900)/900 = 20.0%
@@ -243,10 +243,10 @@ const productRankingData = [
   // Adding historical data for other products
   {
     id: "3-apr",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "粉色", 
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "粉色", // Changed from spec
     sales: 2580,
     quantity: 43,
     growth: 16.2, // (2580-2220)/2220 ≈ 16.2%
@@ -254,10 +254,10 @@ const productRankingData = [
   },
   {
     id: "3-mar",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "粉色",
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "粉色", // Changed from spec
     sales: 2220,
     quantity: 37,
     growth: 12.1, // (2220-1980)/1980 ≈ 12.1%
@@ -265,10 +265,10 @@ const productRankingData = [
   },
   {
     id: "4-apr",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "黑色",
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "黑色", // Changed from spec
     sales: 1500,
     quantity: 25,
     growth: 13.6, // (1500-1320)/1320 ≈ 13.6%
@@ -276,10 +276,10 @@ const productRankingData = [
   },
   {
     id: "5-apr",
-    vendorCode: "hkl5511",
-    productName: "積木",
-    productCategory: "兒童玩具",
-    spec: "恐龍系列",
+    sku: "hkl5511", // Changed from vendorCode
+    product_name: "積木", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "恐龍系列", // Changed from spec
     sales: 1940,
     quantity: 39,
     growth: 10.9, // (1940-1750)/1750 ≈ 10.9%
@@ -287,10 +287,10 @@ const productRankingData = [
   },
   {
     id: "6-apr",
-    vendorCode: "hkl5511",
-    productName: "積木",
-    productCategory: "兒童玩具",
-    spec: "城市系列",
+    sku: "hkl5511", // Changed from vendorCode
+    product_name: "積木", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "城市系列", // Changed from spec
     sales: 1800,
     quantity: 36,
     growth: 9.1, // (1800-1650)/1650 ≈ 9.1%
@@ -298,10 +298,10 @@ const productRankingData = [
   },
   {
     id: "7-apr",
-    vendorCode: "pqr7722",
-    productName: "兒童書包",
-    productCategory: "配件",
-    spec: "藍色",
+    sku: "pqr7722", // Changed from vendorCode
+    product_name: "兒童書包", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "藍色", // Changed from spec
     sales: 1240,
     quantity: 25,
     growth: -1.6, // (1240-1260)/1260 ≈ -1.6%
@@ -309,10 +309,10 @@ const productRankingData = [
   },
   {
     id: "8-apr",
-    vendorCode: "pqr7722",
-    productName: "兒童書包",
-    productCategory: "配件",
-    spec: "粉紅色",
+    sku: "pqr7722", // Changed from vendorCode
+    product_name: "兒童書包", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "粉紅色", // Changed from spec
     sales: 1450,
     quantity: 29,
     growth: 1.4, // (1450-1430)/1430 ≈ 1.4%
@@ -323,10 +323,10 @@ const productRankingData = [
 const productSalesData = [
   {
     id: "1",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "長頸鹿款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "長頸鹿款", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 1240, quantity: 31 },
       { date: "2024-12-01", amount: 1580, quantity: 38 },
@@ -339,10 +339,10 @@ const productSalesData = [
   },
   {
     id: "2",
-    vendorCode: "fju3299",
-    productName: "拼圖",
-    productCategory: "兒童玩具",
-    spec: "海豚款",
+    sku: "fju3299", // Changed from vendorCode
+    product_name: "拼圖", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "海豚款", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 1000, quantity: 25 },
       { date: "2024-12-01", amount: 1200, quantity: 30 },
@@ -355,10 +355,10 @@ const productSalesData = [
   },
   {
     id: "3",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "粉色",
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "粉色", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 1200, quantity: 20 },
       { date: "2024-12-01", amount: 1440, quantity: 24 },
@@ -371,10 +371,10 @@ const productSalesData = [
   },
   {
     id: "4",
-    vendorCode: "jde2088",
-    productName: "兒童外套",
-    productCategory: "服飾",
-    spec: "黑色",
+    sku: "jde2088", // Changed from vendorCode
+    product_name: "兒童外套", // Changed from productName
+    category_name: "服飾", // Changed from productCategory
+    model_name: "黑色", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 600, quantity: 10 },
       { date: "2024-12-01", amount: 720, quantity: 12 },
@@ -387,10 +387,10 @@ const productSalesData = [
   },
   {
     id: "5",
-    vendorCode: "hkl5511",
-    productName: "積木",
-    productCategory: "兒童玩具",
-    spec: "恐龍系列",
+    sku: "hkl5511", // Changed from vendorCode
+    product_name: "積木", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "恐龍系列", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 1060, quantity: 21 },
       { date: "2024-12-01", amount: 1250, quantity: 25 },
@@ -403,10 +403,10 @@ const productSalesData = [
   },
   {
     id: "6",
-    vendorCode: "hkl5511",
-    productName: "積木",
-    productCategory: "兒童玩具",
-    spec: "城市系列",
+    sku: "hkl5511", // Changed from vendorCode
+    product_name: "積木", // Changed from productName
+    category_name: "兒童玩具", // Changed from productCategory
+    model_name: "城市系列", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 980, quantity: 20 },
       { date: "2024-12-01", amount: 1150, quantity: 23 },
@@ -419,10 +419,10 @@ const productSalesData = [
   },
   {
     id: "7",
-    vendorCode: "pqr7722",
-    productName: "兒童書包",
-    productCategory: "配件",
-    spec: "藍色",
+    sku: "pqr7722", // Changed from vendorCode
+    product_name: "兒童書包", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "藍色", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 1350, quantity: 27 },
       { date: "2024-12-01", amount: 1320, quantity: 26 },
@@ -435,10 +435,10 @@ const productSalesData = [
   },
   {
     id: "8",
-    vendorCode: "pqr7722",
-    productName: "兒童書包",
-    productCategory: "配件",
-    spec: "粉紅色",
+    sku: "pqr7722", // Changed from vendorCode
+    product_name: "兒童書包", // Changed from productName
+    category_name: "配件", // Changed from productCategory
+    model_name: "粉紅色", // Changed from spec
     data: [
       { date: "2024-11-01", amount: 1280, quantity: 25 },
       { date: "2024-12-01", amount: 1320, quantity: 26 },

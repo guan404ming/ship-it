@@ -8,7 +8,6 @@ import {
   PlusCircle,
   Search,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -32,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 
 type PurchaseOrderItem = {
   id: string;
@@ -123,13 +123,13 @@ const purchaseOrderData: PurchaseOrderItem[] = [
 ];
 
 export default function PurchaseTempClient() {
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [categoryFilter, setCategoryFilter] =
     React.useState<string>("所有規則");
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const handlePurchaseOrderImport = () => {
-    router.push("/purchase-import");
+    setIsDialogOpen(true);
   };
 
   const totalOrders = new Set(purchaseOrderData.map((item) => item.orderNumber))
@@ -185,9 +185,8 @@ export default function PurchaseTempClient() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              {/* 頁面標題和操作按鈕 */}
               <div className="flex items-center justify-between px-4 lg:px-6">
-                <h1 className="text-3xl font-semibold">進貨暫存</h1>
+                <h1 className="text-3xl font-semibold">我的叫貨</h1>
                 <div className="flex gap-3">
                   <Button
                     onClick={handlePurchaseOrderImport}
@@ -196,18 +195,21 @@ export default function PurchaseTempClient() {
                     className="h-10 px-4"
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    叫貨匯入
+                    新增叫貨
                   </Button>
                   <Button variant="outline" size="sm" className="h-10 px-4">
                     <FileDown className="mr-2 h-4 w-4" />
                     資料匯出
                   </Button>
                 </div>
+                
+                <PurchaseImportDialog 
+                  open={isDialogOpen} 
+                  onOpenChange={setIsDialogOpen} 
+                />
               </div>
 
-              {/* 指標卡片 */}
               <div className="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:px-6">
-                {/* 總進貨單卡片 */}
                 <Card className="border shadow-sm">
                   <CardContent className="flex items-center p-6">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#08678C]/10">
@@ -222,7 +224,6 @@ export default function PurchaseTempClient() {
                   </CardContent>
                 </Card>
 
-                {/* 總項目數卡片 */}
                 <Card className="border shadow-sm">
                   <CardContent className="flex items-center p-6">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#08678C]/10">
@@ -238,7 +239,6 @@ export default function PurchaseTempClient() {
                 </Card>
               </div>
 
-              {/* 搜索和篩選區域 */}
               <div className="flex flex-col gap-4 px-4 sm:flex-row sm:items-center lg:px-6">
                 <div className="flex items-center flex-1">
                   <Search className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -277,8 +277,6 @@ export default function PurchaseTempClient() {
                   )}
                 </div>
               </div>
-
-              {/* 進貨數據表格 */}
               <div className="px-4 lg:px-6">
                 <div className="rounded-lg border">
                   <Table>

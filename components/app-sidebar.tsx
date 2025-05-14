@@ -36,18 +36,14 @@ const data = {
       url: "/",
       icon: IconHome,
     },
-    {
-      title: "資料匯入",
-      url: "/upload",
-      icon: IconFileImport,
-    },
+
     {
       title: "我的庫存",
       url: "/inventory",
       icon: IconDatabase,
     },
     {
-      title: "進貨暫存",
+      title: "我的叫貨",
       url: "/purchase-temp",
       icon: IconFolder,
     },
@@ -55,6 +51,11 @@ const data = {
       title: "歷史數據",
       url: "/history",
       icon: IconChartBar,
+    },
+    {
+      title: "資料匯入",
+      url: "/upload",
+      icon: IconFileImport,
     },
   ],
   navSecondary: [

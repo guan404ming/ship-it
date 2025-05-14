@@ -52,6 +52,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
   const [categoryFilter, setCategoryFilter] = React.useState<string>("所有類別")
   const [detailDialogOpen, setDetailDialogOpen] = React.useState(false)
   const [selectedProductForDetail, setSelectedProductForDetail] = React.useState<string | null>(null)
+  const [customDateRange, setCustomDateRange] = React.useState<{start: string, end: string} | null>(null)
 
   React.useEffect(() => {
     if (isMobile) {
@@ -108,55 +109,98 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
     return Object.values(groupedByName);
   }, [productSalesData]);
 
+  // 產品類型定義
+  type GroupedProduct = {
+    id: string;
+    vendorCode: string;
+    productName: string;
+    productCategory: string;
+    models: Array<{
+      id: string;
+      spec: string;
+      data: Array<{
+        date: string;
+        amount: number;
+        quantity: number;
+      }>;
+    }>;
+  };
+
+  // 獲取指定日期範圍的銷售數據
+  const getDateRangeData = React.useCallback((product: GroupedProduct, startDate: Date, endDate: Date) => {
+    // 收集所有型號的數據並按日期合併
+    const dateMap = new Map<string, { date: string, amount: number, quantity: number }>()
+
+    product.models.forEach(model => {
+      model.data
+        .filter(item => {
+          const itemDate = new Date(item.date)
+          return itemDate >= startDate && itemDate <= endDate
+        })
+        .forEach(item => {
+          if (dateMap.has(item.date)) {
+            const existing = dateMap.get(item.date)!
+            dateMap.set(item.date, {
+              date: item.date,
+              amount: existing.amount + item.amount,
+              quantity: existing.quantity + item.quantity
+            })
+          } else {
+            dateMap.set(item.date, { ...item })
+          }
+        })
+    })
+
+    // 將合併後的數據轉為陣列
+    return Array.from(dateMap.values()).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+  }, [])
+
+  // 計算日期範圍
+  const getDateRange = React.useCallback(() => {
+    const now = new Date("2025-05-01")
+    let startDate: Date
+    let endDate = new Date(now)
+    
+    if (customDateRange) {
+      startDate = new Date(customDateRange.start)
+      endDate = new Date(customDateRange.end)
+    } else {
+      let daysToSubtract = 90
+      if (timeRange === "30d") {
+        daysToSubtract = 30
+      } else if (timeRange === "7d") {
+        daysToSubtract = 7
+      } else if (timeRange === "180d") {
+        daysToSubtract = 180
+      } else if (timeRange === "all") {
+        // 所有時間 - 使用最早的日期
+        daysToSubtract = 365 * 2 // 假設最多兩年資料
+      }
+      
+      startDate = new Date(now)
+      startDate.setDate(startDate.getDate() - daysToSubtract)
+    }
+    
+    return { startDate, endDate }
+  }, [timeRange, customDateRange])
+
   // 合併相同日期的數據
   const selectedProductsData = React.useMemo(() => {
     if (selectedProducts.length === 0) return []
 
-    const now = new Date("2025-05-01")
-    let daysToSubtract = 90
-    if (timeRange === "30d") {
-      daysToSubtract = 30
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7
-    } else if (timeRange === "180d") {
-      daysToSubtract = 180
-    }
-    
-    const startDate = new Date(now)
-    startDate.setDate(startDate.getDate() - daysToSubtract)
+    const { startDate, endDate } = getDateRange()
 
     return groupedProductsData
       .filter(product => selectedProducts.includes(product.id))
       .map(product => {
-        // 收集所有型號的數據並按日期合併
-        const dateMap = new Map<string, { date: string, amount: number, quantity: number }>()
-
-        product.models.forEach(model => {
-          model.data
-            .filter(item => new Date(item.date) >= startDate)
-            .forEach(item => {
-              if (dateMap.has(item.date)) {
-                const existing = dateMap.get(item.date)!
-                dateMap.set(item.date, {
-                  date: item.date,
-                  amount: existing.amount + item.amount,
-                  quantity: existing.quantity + item.quantity
-                })
-              } else {
-                dateMap.set(item.date, { ...item })
-              }
-            })
-        })
-
-        // 將合併後的數據轉為陣列
         return {
           ...product,
-          filteredData: Array.from(dateMap.values()).sort((a, b) => 
-            new Date(a.date).getTime() - new Date(b.date).getTime()
-          )
+          filteredData: getDateRangeData(product, startDate, endDate)
         }
       })
-  }, [selectedProducts, timeRange, groupedProductsData])
+  }, [selectedProducts, groupedProductsData, getDateRange, getDateRangeData])
 
   return (
     <div className="flex flex-col gap-4">
@@ -171,6 +215,65 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
           />
         </div>
         <div className="flex gap-3 items-center">
+          <div className="flex items-center gap-2">
+            <Select value={timeRange} onValueChange={(value) => {
+              setTimeRange(value);
+              if (value !== "custom") {
+                setCustomDateRange(null);
+              } else if (value === "custom" && !customDateRange) {
+                // 如果選擇自訂範圍但尚未設定日期，則設定默認值
+                const now = new Date("2025-05-01");
+                const startDate = new Date(now);
+                startDate.setDate(startDate.getDate() - 30); // 默認為最近30天
+                
+                setCustomDateRange({
+                  start: startDate.toISOString().split('T')[0],
+                  end: now.toISOString().split('T')[0]
+                });
+              }
+            }}>
+              <SelectTrigger 
+                className="w-[150px]"
+                size="sm"
+                aria-label="選擇時間範圍"
+              >
+                <SelectValue placeholder="最近90天" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">最近7天</SelectItem>
+                <SelectItem value="30d">最近30天</SelectItem>
+                <SelectItem value="90d">最近90天</SelectItem>
+                <SelectItem value="180d">最近180天</SelectItem>
+                <SelectItem value="all">全部時間</SelectItem>
+                <SelectItem value="custom">自訂時間範圍</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {timeRange === "custom" && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  className="w-[130px]"
+                  value={customDateRange?.start || ""}
+                  onChange={(e) => setCustomDateRange(prev => ({
+                    start: e.target.value,
+                    end: prev?.end || new Date().toISOString().split('T')[0]
+                  }))}
+                />
+                <span>到</span>
+                <Input
+                  type="date"
+                  className="w-[130px]"
+                  value={customDateRange?.end || ""}
+                  onChange={(e) => setCustomDateRange(prev => ({
+                    start: prev?.start || "2024-01-01",
+                    end: e.target.value
+                  }))}
+                />
+              </div>
+            )}
+          </div>
+          
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger 
               className="w-[150px]"
@@ -215,20 +318,19 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
 
       {/* 商品數據表格 */}
       <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
+        <Table>              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
             
-              </TableHead>
-              <TableHead>廠商代碼</TableHead>
-              <TableHead>產品分類</TableHead>
-              <TableHead>產品名稱</TableHead>
-              <TableHead>規格</TableHead>
-              <TableHead className="text-right">最新銷售量</TableHead>
-              <TableHead className="text-right">最新銷售額</TableHead>
-            </TableRow>
-          </TableHeader>
+                  </TableHead>
+                  <TableHead>廠商代碼</TableHead>
+                  <TableHead>產品分類</TableHead>
+                  <TableHead>產品名稱</TableHead>
+                  <TableHead>規格</TableHead>
+                  <TableHead className="text-right">期間銷售量</TableHead>
+                  <TableHead className="text-right">期間銷售額</TableHead>
+                </TableRow>
+              </TableHeader>
           <TableBody>
             {groupedProductsData.length === 0 ? (
               <TableRow>
@@ -251,16 +353,13 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                 return true;
               }).map((product) => {
                 const isSelected = selectedProducts.includes(product.id);
-                // 計算產品所有規格的數據總和
-                const totalLatestQuantity = product.models.reduce((sum, model) => {
-                  const modelLatestData = model.data[model.data.length - 1];
-                  return sum + modelLatestData.quantity;
-                }, 0);
+                const { startDate, endDate } = getDateRange();
                 
-                const totalLatestAmount = product.models.reduce((sum, model) => {
-                  const modelLatestData = model.data[model.data.length - 1];
-                  return sum + modelLatestData.amount;
-                }, 0);
+                // 計算所選時間範圍內產品所有規格的數據總和
+                const salesData = getDateRangeData(product, startDate, endDate);
+                
+                const totalQuantity = salesData.reduce((sum, item) => sum + item.quantity, 0);
+                const totalAmount = salesData.reduce((sum, item) => sum + item.amount, 0);
                 
                 const modelsCount = product.models.length;
                 
@@ -300,10 +399,10 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                     </TableCell>
                     <TableCell>{modelsCount} 種規格</TableCell>
                     <TableCell className="text-right font-mono">
-                      {totalLatestQuantity}
+                      {totalQuantity}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      $ {totalLatestAmount.toLocaleString()}
+                      $ {totalAmount.toLocaleString()}
                     </TableCell>
                   </TableRow>
                 )
@@ -333,21 +432,6 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                     <ToggleGroupItem value="amount">銷售額</ToggleGroupItem>
                     <ToggleGroupItem value="quantity">銷售量</ToggleGroupItem>
                   </ToggleGroup>
-                  <Select value={timeRange} onValueChange={setTimeRange}>
-                    <SelectTrigger 
-                      className="ml-2 w-[150px]"
-                      size="sm"
-                      aria-label="Select time range"
-                    >
-                      <SelectValue placeholder="最近90天" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="7d">最近7天</SelectItem>
-                      <SelectItem value="30d">最近30天</SelectItem>
-                      <SelectItem value="90d">最近90天</SelectItem>
-                      <SelectItem value="180d">最近180天</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             </CardHeader>
@@ -429,13 +513,14 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
       <div className="mt-6">
         <Card className="border shadow-sm">
           <CardHeader>
-            <CardTitle>商品表現說明</CardTitle>
+            <CardTitle>商品表現說明與使用指南</CardTitle>
           </CardHeader>
           <CardContent>
             <p>
-              x 軸可選時間區間、顆粒度(月、日)<br />
-              y 軸可選銷售額、銷售量<br />
-              勾選商品可查看多個商品的銷售表現
+              時間範圍：可選擇預設時間區間（7天、30天、90天、180天），或設定自訂日期範圍<br />
+              數據選擇：可選擇顯示銷售額或銷售量<br />
+              商品比較：勾選多個商品可同時比較其銷售表現<br />
+              規格詳情：點擊「查看 X 種規格」可比較同一產品的不同規格
             </p>
           </CardContent>
         </Card>

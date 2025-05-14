@@ -3,14 +3,14 @@
 import * as React from "react"
 import { LineChart, Line, XAxis, CartesianGrid, Legend } from "recharts"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartConfig, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
 
 interface ModelSalesData {
   date: string
@@ -42,10 +42,11 @@ const chartConfig = {
   }
 } satisfies ChartConfig
 
-export function ProductDetailDialog({ open, onOpenChange, productName, productCategory, vendorCode, models }: ProductDetailProps) {
+export function ProductDetailDialog({ open, onOpenChange, productName, productCategory, vendorCode, models }: ProductDetailProps): React.ReactNode {
   const [timeRange, setTimeRange] = React.useState("90d")
   const [chartType, setChartType] = React.useState("amount")
   const [selectedModels, setSelectedModels] = React.useState<string[]>([])
+  const [customDateRange, setCustomDateRange] = React.useState<{start: string, end: string} | null>(null)
 
   // 當對話框開啟時，默認選擇所有規格
   React.useEffect(() => {
@@ -54,32 +55,50 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
     }
   }, [open, models])
 
+  // 計算日期範圍
+  const getDateRange = React.useCallback(() => {
+    const now = new Date("2025-05-01")
+    let startDate: Date
+    let endDate = new Date(now)
+    
+    if (customDateRange) {
+      startDate = new Date(customDateRange.start)
+      endDate = new Date(customDateRange.end)
+    } else {
+      let daysToSubtract = 90
+      if (timeRange === "30d") {
+        daysToSubtract = 30
+      } else if (timeRange === "7d") {
+        daysToSubtract = 7
+      } else if (timeRange === "180d") {
+        daysToSubtract = 180
+      } else if (timeRange === "all") {
+        // 所有時間 - 使用最早的日期
+        daysToSubtract = 365 * 2 // 假設最多兩年資料
+      }
+      
+      startDate = new Date(now)
+      startDate.setDate(startDate.getDate() - daysToSubtract)
+    }
+    
+    return { startDate, endDate }
+  }, [timeRange, customDateRange])
+
   const filteredModelsData = React.useMemo(() => {
     if (selectedModels.length === 0) return []
+    
+    const { startDate, endDate } = getDateRange()
     
     return models
       .filter(model => selectedModels.includes(model.id))
       .map(model => ({
         ...model,
         filteredData: model.data.filter(item => {
-          const now = new Date("2025-05-01")
-          let daysToSubtract = 90
-          if (timeRange === "30d") {
-            daysToSubtract = 30
-          } else if (timeRange === "7d") {
-            daysToSubtract = 7
-          } else if (timeRange === "180d") {
-            daysToSubtract = 180
-          }
-          
-          const startDate = new Date(now)
-          startDate.setDate(startDate.getDate() - daysToSubtract)
-          
           const date = new Date(item.date)
-          return date >= startDate
+          return date >= startDate && date <= endDate
         })
       }))
-  }, [selectedModels, timeRange, models])
+  }, [selectedModels, models, getDateRange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,7 +121,7 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                     已選取 {selectedModels.length} 個規格
                   </CardDescription>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center gap-4">
                   <ToggleGroup
                     type="single"
                     value={chartType}
@@ -113,21 +132,64 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                     <ToggleGroupItem value="amount">銷售額</ToggleGroupItem>
                     <ToggleGroupItem value="quantity">銷售量</ToggleGroupItem>
                   </ToggleGroup>
-                  <Select value={timeRange} onValueChange={setTimeRange}>
-                    <SelectTrigger 
-                      className="ml-2 w-[150px]"
-                      size="sm"
-                      aria-label="選擇時間範圍"
-                    >
-                      <SelectValue placeholder="最近90天" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="7d">最近7天</SelectItem>
-                      <SelectItem value="30d">最近30天</SelectItem>
-                      <SelectItem value="90d">最近90天</SelectItem>
-                      <SelectItem value="180d">最近180天</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Select value={timeRange} onValueChange={(value) => {
+                      setTimeRange(value);
+                      if (value !== "custom") {
+                        setCustomDateRange(null);
+                      } else if (value === "custom" && !customDateRange) {
+                        // 如果選擇自訂範圍但尚未設定日期，則設定默認值
+                        const now = new Date("2025-05-01");
+                        const startDate = new Date(now);
+                        startDate.setDate(startDate.getDate() - 30); // 默認為最近30天
+                        
+                        setCustomDateRange({
+                          start: startDate.toISOString().split('T')[0],
+                          end: now.toISOString().split('T')[0]
+                        });
+                      }
+                    }}>
+                      <SelectTrigger 
+                        className="w-[150px]"
+                        size="sm"
+                        aria-label="選擇時間範圍"
+                      >
+                        <SelectValue placeholder="最近90天" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7d">最近7天</SelectItem>
+                        <SelectItem value="30d">最近30天</SelectItem>
+                        <SelectItem value="90d">最近90天</SelectItem>
+                        <SelectItem value="180d">最近180天</SelectItem>
+                        <SelectItem value="all">全部時間</SelectItem>
+                        <SelectItem value="custom">自訂時間範圍</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {timeRange === "custom" && (
+                      <div className="flex items-center gap-2 ml-2">
+                        <Input
+                          type="date"
+                          className="w-[130px]"
+                          value={customDateRange?.start || ""}
+                          onChange={(e) => setCustomDateRange(prev => ({
+                            start: e.target.value,
+                            end: prev?.end || new Date().toISOString().split('T')[0]
+                          }))}
+                        />
+                        <span>到</span>
+                        <Input
+                          type="date"
+                          className="w-[130px]"
+                          value={customDateRange?.end || ""}
+                          onChange={(e) => setCustomDateRange(prev => ({
+                            start: prev?.start || "2024-01-01",
+                            end: e.target.value
+                          }))}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -200,14 +262,23 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                   <TableHead className="w-12">
                   </TableHead>
                   <TableHead>規格名稱</TableHead>
-                  <TableHead className="text-right">最新銷售量</TableHead>
-                  <TableHead className="text-right">最新銷售額</TableHead>
+                  <TableHead className="text-right">期間總銷售量</TableHead>
+                  <TableHead className="text-right">期間總銷售額</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {models.map((model) => {
                   const isSelected = selectedModels.includes(model.id);
-                  const latestData = model.data[model.data.length - 1];
+                  const { startDate, endDate } = getDateRange();
+                  
+                  // 計算所選時間範圍內的數據總和
+                  const periodData = model.data.filter(item => {
+                    const date = new Date(item.date);
+                    return date >= startDate && date <= endDate;
+                  });
+                  
+                  const totalQuantity = periodData.reduce((sum, item) => sum + item.quantity, 0);
+                  const totalAmount = periodData.reduce((sum, item) => sum + item.amount, 0);
                   
                   return (
                     <TableRow key={model.id} className={isSelected ? "bg-muted/50" : ""}>
@@ -226,10 +297,10 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                       </TableCell>
                       <TableCell>{model.spec}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {latestData.quantity}
+                        {totalQuantity}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        $ {latestData.amount.toLocaleString()}
+                        $ {totalAmount.toLocaleString()}
                       </TableCell>
                     </TableRow>
                   )
@@ -238,10 +309,6 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
             </Table>
           </div>
         </div>
-        
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>關閉</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

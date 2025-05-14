@@ -195,7 +195,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, category
                           type="monotone"
                           dataKey={chartType}
                           stroke={color}
-                          name={model.spec}
+                          name={model.model_name}
                           strokeWidth={2}
                         />
                       );
@@ -266,7 +266,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, category
                           }}
                         />
                       </TableCell>
-                      <TableCell>{model.spec}</TableCell>
+                      <TableCell>{model.model_name}</TableCell>
                       <TableCell className="text-right font-mono">
                         <div className="flex items-center justify-end">
                           <span>{totalQuantity}</span>

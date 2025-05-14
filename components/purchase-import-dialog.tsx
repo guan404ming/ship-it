@@ -10,6 +10,19 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { createPurchaseBatch, addPurchaseItem } from "@/actions/purchase";
+import { ModelItem } from "@/lib/types";
+
+// Local interface - different from database PurchaseItem
+interface PurchaseItem {
+  id: number;
+  isVisible: boolean;
+  product_name: string;
+  quantity: number;
+  model_id?: number;
+  product_id?: number;
+  models: ModelItem[]; 
+  note?: string;
+}
 import {
   Dialog,
   DialogContent,
@@ -19,22 +32,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-interface ModelItem {
-  id: number;
-  name: string;
-  quantity: number;
-}
-
-interface PurchaseItem {
-  id: number;
-  isVisible: boolean;
-  product_name: string; // Changed from productName to align with database
-  quantity: number;
-  model_id?: number; // Changed from modelId to align with database
-  product_id?: number; // Changed from productId to align with database
-  models: ModelItem[]; 
-  note?: string; // Changed from notes to align with database
-}
 
 interface PurchaseImportDialogProps {
   trigger?: React.ReactNode;

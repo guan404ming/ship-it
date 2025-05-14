@@ -9,18 +9,7 @@ import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { getDateRange as getDateRangeUtil, calculateGrowthRate } from "@/lib/date-utils"
 
-interface RankingProduct {
-  id: string
-  sku: string // Changed from vendorCode to align with database
-  product_name: string // Changed from productName to align with database
-  category_name: string // Changed from productCategory to align with database
-  model_name: string // Changed from spec to align with database
-  sales: number
-  quantity?: number
-  growth?: number
-  returns?: number
-  date?: string
-}
+import { RankingProduct } from "@/lib/types"
 
 interface SalesRankingProps {
   productRankingData: RankingProduct[]

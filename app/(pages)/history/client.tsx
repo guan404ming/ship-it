@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverallPerformance } from "@/components/history/overall-performance";
 import { ProductPerformance } from "@/components/history/product-performance";
 import { SalesRankings } from "@/components/history/sales-rankings";
+import { SalesData, RankingProduct, GroupedProductSales } from "@/lib/types";
 
-const salesData = [
+const salesData: SalesData[] = [
   { date: "2024-11-01", amount: 6240, quantity: 124 },
   { date: "2024-11-07", amount: 6580, quantity: 131 },
   { date: "2024-11-14", amount: 6750, quantity: 135 },
@@ -40,7 +41,7 @@ const salesData = [
   { date: "2025-05-01", amount: 12480, quantity: 249 },
 ];
 
-const productRankingData = [
+const productRankingData: RankingProduct[] = [
   {
     id: "1",
     sku: "fju3299", // Changed from vendorCode
@@ -320,7 +321,7 @@ const productRankingData = [
   },
 ];
 
-const productSalesData = [
+const productSalesData: GroupedProductSales[] = [
   {
     id: "1",
     sku: "fju3299", // Changed from vendorCode

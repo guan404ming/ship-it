@@ -17,24 +17,111 @@ import { ProductDetailDialog } from "./product-detail-dialog"
 import { 
   getDateRange as getDateRangeUtil
 } from "@/lib/date-utils"
-import { 
-  GroupedProduct, 
-  SalesData,
-  getProductDateRangeData, 
-  calculateProductGrowthRates 
-} from "@/lib/product-utils"
+import { SalesData } from "@/lib/types"
+import { getGrowthComparisonPeriods, calculateGrowthRate } from "@/lib/date-utils"
 
-interface ProductSalesData {
-  id: string
-  sku: string // Changed from vendorCode to align with database
-  product_name: string // Changed from productName to align with database
-  category_name: string // Changed from productCategory to align with database
-  model_name: string // Changed from spec to align with database
-  data: SalesData[]
+// Local wrapper functions for type compatibility with our utility functions
+function getProductDateRangeData(product: GroupedProduct, startDate: Date, endDate: Date): SalesData[] {
+  // Only process if models exist
+  if (!product.models) return [];
+  
+  const dateMap = new Map<string, { date: string, amount: number, quantity: number }>();
+
+  product.models.forEach(model => {
+    model.data
+      .filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= startDate && itemDate <= endDate;
+      })
+      .forEach(item => {
+        if (dateMap.has(item.date)) {
+          const existing = dateMap.get(item.date)!;
+          dateMap.set(item.date, {
+            date: item.date,
+            amount: existing.amount + item.amount,
+            quantity: existing.quantity + item.quantity
+          });
+        } else {
+          dateMap.set(item.date, { ...item });
+        }
+      });
+  });
+
+  return Array.from(dateMap.values()).sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+}
+
+function calculateProductGrowthRates(
+  product: GroupedProduct,
+  timeRange: string,
+  customDateRange: { start: string, end: string } | null,
+  referenceDate: Date = new Date("2025-05-01")
+): { quantityGrowth?: number, amountGrowth?: number } {
+  if (!product.models) return {};
+  
+  // 獲取比較期間
+  const {
+    currentPeriodStart,
+    currentPeriodEnd,
+    previousPeriodStart,
+    previousPeriodEnd
+  } = getGrowthComparisonPeriods(timeRange, customDateRange, referenceDate);
+  
+  // 獲取所有產品數據
+  const allData = product.models.flatMap(model => model.data);
+  
+  // 將數據分為兩個區間
+  const currentPeriodData = allData.filter(item => {
+    const date = new Date(item.date);
+    return date >= currentPeriodStart && date <= currentPeriodEnd;
+  });
+  
+  const previousPeriodData = allData.filter(item => {
+    const date = new Date(item.date);
+    return date >= previousPeriodStart && date <= previousPeriodEnd;
+  });
+  
+  // 計算當前區間和前一區間的總量
+  const currentQuantity = currentPeriodData.reduce((sum, item) => sum + item.quantity, 0);
+  const previousQuantity = previousPeriodData.reduce((sum, item) => sum + item.quantity, 0);
+  
+  const currentAmount = currentPeriodData.reduce((sum, item) => sum + item.amount, 0);
+  const previousAmount = previousPeriodData.reduce((sum, item) => sum + item.amount, 0);
+  
+  // 計算成長率
+  const quantityGrowth = calculateGrowthRate(currentQuantity, previousQuantity);
+  const amountGrowth = calculateGrowthRate(currentAmount, previousAmount);
+  
+  return { quantityGrowth, amountGrowth };
+}
+
+// Local interface for how this component uses the data
+interface ProductModel {
+  id: string;
+  model_name: string;
+  data: SalesData[];
+}
+
+interface GroupedProduct {
+  id: string;
+  sku: string;
+  product_name: string;
+  category_name: string;
+  models: ProductModel[];
+}
+
+interface FlatProduct {
+  id: string | number;
+  sku: string;
+  product_name: string;
+  category_name: string;
+  model_name?: string;
+  data?: SalesData[];
 }
 
 interface ProductPerformanceProps {
-  productSalesData: ProductSalesData[]
+  productSalesData: FlatProduct[]
 }
 
 const chartConfig = {
@@ -87,9 +174,9 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
         };
       }
       acc[key].models.push({
-        id: product.id,
-        model_name: product.model_name, // Changed from spec
-        data: product.data
+        id: product.id.toString(),
+        model_name: product.model_name || "",
+        data: product.data || []
       });
       return acc;
     }, {} as Record<string, GroupedProduct>);
@@ -245,7 +332,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                   checked={selectedProducts.length === groupedProductsData.length}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setSelectedProducts(groupedProductsData.map(product => product.id));
+                      setSelectedProducts(groupedProductsData.map(product => product.id.toString()));
                     } else {
                       setSelectedProducts([]);
                     }
@@ -297,7 +384,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                   customDateRange
                 );
                 
-                const modelsCount = product.models.length;
+                const modelsCount = product.models?.length || 0;
                 
                 return (
                   <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
@@ -307,7 +394,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                         checked={isSelected}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedProducts([...selectedProducts, product.id])
+                            setSelectedProducts([...selectedProducts, product.id.toString()])
                           } else {
                             setSelectedProducts(selectedProducts.filter(id => id !== product.id))
                           }
@@ -324,7 +411,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                           size="sm"
                           className="h-7 px-2 text-xs"
                           onClick={() => {
-                            setSelectedProductForDetail(product.id);
+                            setSelectedProductForDetail(product.id.toString());
                             setDetailDialogOpen(true);
                           }}
                         >

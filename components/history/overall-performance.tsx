@@ -9,11 +9,7 @@ import { ChartContainer, ChartConfig, ChartTooltip, ChartTooltipContent } from "
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useIsMobile } from "@/hooks/use-mobile"
 
-interface SalesData {
-  date: string
-  amount: number
-  quantity: number
-}
+import { SalesData } from "@/lib/types"
 
 interface OverallPerformanceProps {
   salesData: SalesData[]

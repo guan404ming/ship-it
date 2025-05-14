@@ -24,15 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Mock data for import history
-type ImportHistory = {
-  id: string;
-  date: string;
-  fileName: string;
-  recordCount: number;
-  status: string;
-  note?: string;
-};
+import { ImportHistory } from "@/lib/types";
 
 // Create a client component that uses useSearchParams
 function UploadContent() {

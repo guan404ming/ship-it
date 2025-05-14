@@ -26,25 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Database } from "@/database.types";
-
-type StockRecord = Database["public"]["Tables"]["stock_records"]["Row"] & {
-  product_models: Database["public"]["Tables"]["product_models"]["Row"] & {
-    products: Database["public"]["Tables"]["products"]["Row"];
-  };
-};
-
-// TODO: Implement inventory movements history view
-// type InventoryMovement = Database["public"]["Tables"]["inventory_movements"]["Row"] & {
-//   product_models: Database["public"]["Tables"]["product_models"]["Row"] & {
-//     products: Database["public"]["Tables"]["products"]["Row"];
-//   };
-// };
+import { StockRecordWithModel } from "@/lib/types";
 
 interface InventoryClientProps {
-  initialInventory: StockRecord[];
+  initialInventory: StockRecordWithModel[];
   // TODO: Implement inventory movements history view
-  // initialMovements: InventoryMovement[];
+  // initialMovements: InventoryMovementWithModel[];
 }
 
 export function InventoryClient({ initialInventory }: InventoryClientProps) {
@@ -54,7 +41,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     React.useState<string>("所有類別");
   const [statusFilter, setStatusFilter] = React.useState<string>("所有狀態");
   const [sortConfig, setSortConfig] = React.useState<{
-    key: keyof StockRecord | null;
+    key: keyof StockRecordWithModel | null;
     direction: "ascending" | "descending" | null;
   }>({
     key: null,
@@ -84,7 +71,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     setStatusFilter("所有狀態");
   };
 
-  const requestSort = (key: keyof StockRecord) => {
+  const requestSort = (key: keyof StockRecordWithModel) => {
     let direction: "ascending" | "descending" | null = "ascending";
 
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
@@ -131,16 +118,16 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
     if (sortConfig.key && sortConfig.direction) {
       filteredData.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof StockRecord];
-        const bValue = b[sortConfig.key as keyof StockRecord];
+        const aValue = a[sortConfig.key as keyof StockRecordWithModel];
+        const bValue = b[sortConfig.key as keyof StockRecordWithModel];
 
         if (aValue !== undefined && bValue !== undefined) {
-          const a = aValue ?? 0;
-          const b = bValue ?? 0;
-          if (a < b) {
+          const aCompare = aValue ?? 0;
+          const bCompare = bValue ?? 0;
+          if (aCompare < bCompare) {
             return sortConfig.direction === "ascending" ? -1 : 1;
           }
-          if (a > b) {
+          if (aCompare > bCompare) {
             return sortConfig.direction === "ascending" ? 1 : -1;
           }
         }

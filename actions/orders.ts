@@ -3,13 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
-type OrderStatus =
-  | "pending"
-  | "shipped"
-  | "delivered"
-  | "confirmed"
-  | "confirmed_in_trial"
-  | "canceled";
+import { OrderStatus } from "@/lib/types";
 
 interface OrderUpdateData {
   order_status: OrderStatus;

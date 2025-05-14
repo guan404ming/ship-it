@@ -12,10 +12,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { getDateRange as getDateRangeUtil } from "@/lib/date-utils"
-import { 
-  ProductModel,
-  calculateProductModelGrowthRates 
-} from "@/lib/product-utils"
+import { calculateProductModelGrowthRates } from "@/lib/product-utils"
+import { ProductSalesModel } from "@/lib/types"
 
 interface ProductDetailProps {
   open: boolean
@@ -23,7 +21,7 @@ interface ProductDetailProps {
   product_name: string // Changed from productName
   category_name: string // Changed from productCategory
   sku: string // Changed from vendorCode
-  models: ProductModel[]
+  models: ProductSalesModel[]
 }
 
 const chartConfig = {
@@ -40,7 +38,7 @@ const chartConfig = {
 export function ProductDetailDialog({ open, onOpenChange, product_name, category_name, sku, models }: ProductDetailProps): React.ReactNode {
   const [timeRange, setTimeRange] = React.useState("90d")
   const [chartType, setChartType] = React.useState("amount")
-  const [selectedModels, setSelectedModels] = React.useState<string[]>([])
+  const [selectedModels, setSelectedModels] = React.useState<(string | number)[]>([])
   const [customDateRange, setCustomDateRange] = React.useState<{start: string, end: string} | null>(null)
   
   // 每次打開 dialog 時，自動全選所有 models

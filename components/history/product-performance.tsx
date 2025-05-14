@@ -67,9 +67,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
     return ["所有類別", ...Array.from(categories)]
   }, [productSalesData])
 
-  // 過濾商品的邏輯已經移至表格渲染部分，這裡不再需要單獨的 filteredProducts
 
-  // 將商品數據按productName分組
   const groupedProductsData = React.useMemo(() => {
     // 1. 按產品名稱進行分組
     const groupedByName = productSalesData.reduce((acc, product) => {
@@ -318,10 +316,20 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
 
       {/* 商品數據表格 */}
       <div className="rounded-lg border">
-        <Table>              <TableHeader>
+        <Table><TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-            
+                    <Checkbox
+                      id="product-table-all"
+                      checked={selectedProducts.length === groupedProductsData.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedProducts(groupedProductsData.map(product => product.id));
+                        } else {
+                          setSelectedProducts([]);
+                        }
+                      }}
+                    />
                   </TableHead>
                   <TableHead>廠商代碼</TableHead>
                   <TableHead>產品分類</TableHead>

@@ -45,10 +45,17 @@ function UploadContent() {
   );
 
   // Add validation state
-  const [quantity, setQuantity] = React.useState<string>("");
   const [price, setPrice] = React.useState<string>("");
-  const [quantityError, setQuantityError] = React.useState<string | null>(null);
+  const [productCode, setProductCode] = React.useState<string>("");
+  const [productName, setProductName] = React.useState<string>("");
+  const [modelName, setModelName] = React.useState<string>("");
   const [priceError, setPriceError] = React.useState<string | null>(null);
+  const [modelNameError, setModelNameError] = React.useState<string | null>(null);
+
+  // 新增的商品型號列表
+  const [models, setModels] = React.useState<
+    Array<{ id: string; modelName: string; quantity: string; error: string | null }>
+  >([]);
 
   // 檢查 URL 參數，自動選擇「庫存匯入」
   React.useEffect(() => {
@@ -113,25 +120,27 @@ function UploadContent() {
   ]);
 
   // Validation handlers
-  const validateQuantity = (value: string) => {
-    setQuantity(value);
 
-    if (!value) {
-      setQuantityError(null);
-      return;
-    }
-
-    const numberValue = parseInt(value, 10);
-    if (
-      isNaN(numberValue) ||
-      !Number.isInteger(numberValue) ||
-      numberValue <= 0 ||
-      value.includes(".")
-    ) {
-      setQuantityError("請輸入正整數");
-    } else {
-      setQuantityError(null);
-    }
+  const validateModelQuantity = (id: string, value: string) => {
+    const updatedModels = models.map((model) => {
+      if (model.id === id) {
+        let error: string | null = null;
+        if (value) {
+          const numberValue = parseInt(value, 10);
+          if (
+            isNaN(numberValue) ||
+            !Number.isInteger(numberValue) ||
+            numberValue <= 0 ||
+            value.includes(".")
+          ) {
+            error = "請輸入正整數";
+          }
+        }
+        return { ...model, quantity: value, error };
+      }
+      return model;
+    });
+    setModels(updatedModels);
   };
 
   const validatePrice = (value: string) => {
@@ -148,6 +157,35 @@ function UploadContent() {
     } else {
       setPriceError(null);
     }
+  };
+
+  // 新增型號
+  const addModel = () => {
+    if (!modelName.trim()) return;
+    
+    // 檢查是否有重複的型號名稱
+    const trimmedModelName = modelName.trim();
+    const isDuplicate = models.some(model => 
+      model.modelName.toLowerCase() === trimmedModelName.toLowerCase()
+    );
+    
+    if (isDuplicate) {
+      setModelNameError("此型號名稱已存在");
+      return;
+    }
+    
+    const newId = `model-${Date.now()}`;
+    setModels([
+      ...models,
+      { id: newId, modelName: trimmedModelName, quantity: "", error: null }
+    ]);
+    setModelName("");
+    setModelNameError(null);
+  };
+
+  // 刪除型號
+  const removeModel = (id: string) => {
+    setModels(models.filter(model => model.id !== id));
   };
 
   return (
@@ -182,7 +220,7 @@ function UploadContent() {
                             checked={fileImportType === "batch"}
                           />
                           <Label htmlFor="batch-import" className="ml-2">
-                            批量匯入
+                            銷售匯入
                           </Label>
                         </div>
                         <div className="flex items-center">
@@ -245,7 +283,7 @@ function UploadContent() {
                             checked={manualImportType === "batch"}
                           />
                           <Label htmlFor="batch-manual" className="ml-2">
-                            批量匯入
+                            銷售匯入
                           </Label>
                         </div>
                         <div className="flex items-center">
@@ -270,45 +308,132 @@ function UploadContent() {
                           <Input
                             id="product-code"
                             placeholder="請輸入貨品編號"
+                            value={productCode}
+                            onChange={(e) => setProductCode(e.target.value)}
                           />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="item-name">商品名稱</Label>
-                          <Input id="item-name" placeholder="請輸入商品名稱" />
+                          <Input
+                            id="item-name"
+                            placeholder="請輸入商品名稱"
+                            value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                          />
                         </div>
                         <div className="grid gap-1.5">
-                          <Label htmlFor="quantity">數量</Label>
-                          <Input
-                            id="quantity"
-                            placeholder="請輸入數量"
-                            value={quantity}
-                            onChange={(e) => validateQuantity(e.target.value)}
-                            className={quantityError ? "border-red-500" : ""}
-                          />
-                          {quantityError && (
-                            <p className="text-sm text-red-500">
-                              {quantityError}
+                          <Label htmlFor="item-name">商品型號</Label>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Input
+                                      placeholder="請輸入型號名稱"
+                                      value={modelName}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        setModelName(value);
+                                        
+                                        // 當使用者輸入時，檢查是否有重複的型號名稱
+                                        const trimmedValue = value.trim();
+                                        if (trimmedValue) {
+                                          const isDuplicate = models.some(model => 
+                                            model.modelName.toLowerCase() === trimmedValue.toLowerCase()
+                                          );
+                                          setModelNameError(isDuplicate ? "此型號名稱已存在" : null);
+                                        } else {
+                                          setModelNameError(null);
+                                        }
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && modelName.trim() && !modelNameError) {
+                                          e.preventDefault();
+                                          addModel();
+                                        }
+                                      }}
+                                      className={modelNameError ? "border-red-500" : ""}
+                              />
+                            </div>
+                            <Button 
+                              type="button"
+                              onClick={addModel}
+                              disabled={!modelName.trim() || modelNameError !== null}
+                            >
+                              新增型號
+                            </Button>
+                          </div>
+                          {modelNameError && (
+                            <p className="text-sm text-red-500">{modelNameError}</p>
+                          )}
+                        </div>
+                        
+                        {/* 型號輸入區 */}
+                        <div className="rounded-lg border p-4">
+                          
+                          {models.length > 0 && (
+                            <div className="space-y-3 mt-2">
+                              <div className="grid grid-cols-5 gap-2 text-sm text-muted-foreground font-medium">
+                                <div className="col-span-3">型號名稱</div>
+                                <div className="col-span-1">數量</div>
+                                <div className="col-span-1"></div>
+                              </div>
+                              
+                              {models.map((model) => (
+                                <div key={model.id} className="grid grid-cols-5 gap-2 items-center">
+                                  <div className="col-span-3 text-sm">{model.modelName}</div>
+                                  <div className="col-span-1">
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      placeholder="數量"
+                                      value={model.quantity}
+                                      onChange={(e) => validateModelQuantity(model.id, e.target.value)}
+                                      className={model.error ? "border-red-500" : ""}
+                                    />
+                                    {model.error && (
+                                      <p className="text-sm text-red-500 mt-1">{model.error}</p>
+                                    )}
+                                  </div>
+                                  <div className="col-span-1 flex justify-end">
+                                    <Button 
+                                      type="button"
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => removeModel(model.id)}
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                      </svg>
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {models.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-3">
+                              尚未新增任何型號
                             </p>
                           )}
                         </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="price">價格</Label>
-                          <Input
-                            id="price"
-                            placeholder="請輸入價格"
-                            disabled={manualImportType === "single"}
-                            className={`${
-                              manualImportType === "single"
-                                ? "bg-gray-100 cursor-not-allowed"
-                                : ""
-                            } ${priceError ? "border-red-500" : ""}`}
-                            value={price}
-                            onChange={(e) => validatePrice(e.target.value)}
-                          />
-                          {priceError && manualImportType !== "single" && (
-                            <p className="text-sm text-red-500">{priceError}</p>
-                          )}
-                        </div>
+                        
+                        {manualImportType !== "single" && (
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="price">價格</Label>
+                            <Input
+                              id="price"
+                              placeholder="請輸入價格"
+                              className={priceError ? "border-red-500" : ""}
+                              value={price}
+                              onChange={(e) => validatePrice(e.target.value)}
+                            />
+                            {priceError && (
+                              <p className="text-sm text-red-500">{priceError}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-sm text-gray-500">

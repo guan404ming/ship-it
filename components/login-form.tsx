@@ -17,10 +17,10 @@ export function LoginForm({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-3">
           <a href="#" className="flex flex-col items-center gap-2 font-medium">
-            <span className="sr-only">Shit-It</span>
+            <span className="sr-only">Ship-It</span>
           </a>
           <h1 className="text-2xl font-bold text-center">
-            Welcome to Shit-It
+            Welcome to Ship-It
           </h1>
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
             Please sign in to continue.

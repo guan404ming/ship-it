@@ -7,13 +7,13 @@ import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-import data from "./data.json";
+import data from "../data.json";
 import { useSession } from "next-auth/react";
 import { LoginForm } from "@/components/login-form";
 import { Skeleton } from "@/components/ui/skeleton";
 export default function Page() {
   const { data: session, status } = useSession();
-  
+
   if (status === "loading") {
     return <Skeleton className="h-svh" />;
   }

@@ -10,7 +10,7 @@ import { LoginForm } from "@/components/login-form";
 import { Skeleton } from "@/components/ui/skeleton";
 export default function Page() {
   const { data: session, status } = useSession();
-  
+
   if (status === "loading") {
     return <Skeleton className="h-svh" />;
   }

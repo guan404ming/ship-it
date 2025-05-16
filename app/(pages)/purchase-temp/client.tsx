@@ -48,6 +48,48 @@ type PurchaseOrderItem = {
   note?: string;
 };
 
+// 1. raw 型別（只寫到你用得到的屬性）
+type PurchaseItemRaw = {
+  item_id: number;
+  quantity: number | null;
+  unit_cost: number | null;
+  purchase_batches: {
+    created_at: string | null;
+    status: string | null;
+    suppliers: { supplier_name: string | null }[];
+  }[];
+  product_models: {
+    model_name: string | null;
+    products: {
+      product_name: string | null;
+      categories: { category_name: string | null }[];
+    }[];
+  }[];
+};
+
+/** 把 Raw 轉平為前端欄位 */
+const toItem = (row: PurchaseItemRaw): PurchaseOrderItem => {
+  const batch = row.purchase_batches?.[0];
+  const supp  = batch?.suppliers?.[0];
+  const model = row.product_models?.[0];
+  const prod  = model?.products?.[0];
+  const cate  = prod?.categories?.[0];
+
+  return {
+    id: row.item_id.toString(),
+    orderNumber: batch?.status ?? "N/A",
+    vendorCode:  supp?.supplier_name ?? "未知廠商",
+    productCategory: cate?.category_name ?? "未分類",
+    productName: prod?.product_name ?? "未命名商品",
+    spec: model?.model_name ?? "無規格",
+    quantity: row.quantity ?? 0,
+    totalPrice: (Number(row.unit_cost) || 0) * (row.quantity ?? 0),
+    orderDate: batch?.created_at ?? "",
+    expectedArrivalDate: "-",
+    note: "-",
+  };
+};
+
 
 export default function PurchaseTempClient() {
   // 後端資料
@@ -65,9 +107,9 @@ export default function PurchaseTempClient() {
   React.useEffect(() => {
     async function fetchData() {
       try {
-        const res = await getPurchaseOrderItems(); // 由 server action 包裝
-        if (!res) throw new Error("Server error");
-        setPurchaseOrderData(res);
+        const raw = (await getPurchaseOrderItems()) as PurchaseItemRaw[];
+        const flat = raw.map(toItem);        // ← 轉平
+        setPurchaseOrderData(flat);
       } catch (e) {
         setError((e as Error).message ?? "載入失敗");
       } finally {

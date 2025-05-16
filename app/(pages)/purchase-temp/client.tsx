@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
+import { getPurchaseOrderItems } from "@/actions/purchase";
 
 type PurchaseOrderItem = {
   id: string;
@@ -47,129 +48,77 @@ type PurchaseOrderItem = {
   note?: string;
 };
 
-const purchaseOrderData: PurchaseOrderItem[] = [
-  {
-    id: "1",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "長頸鹿款",
-    quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
-  },
-  {
-    id: "2",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "海豚款",
-    quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
-  },
-  {
-    id: "3",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "海豚款",
-    quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
-  },
-  {
-    id: "4",
-    orderNumber: "PO2023001",
-    vendorCode: "jde2088",
-    productCategory: "服飾",
-    productName: "兒童外套",
-    spec: "黑色",
-    quantity: 110,
-    totalPrice: 5000,
-    orderDate: "2025-04-29",
-    expectedArrivalDate: "2025-05-10",
-  },
-  {
-    id: "5",
-    orderNumber: "PO2023001",
-    vendorCode: "jde2088",
-    productCategory: "服飾",
-    productName: "兒童外套",
-    spec: "粉色",
-    quantity: 100,
-    totalPrice: 6000,
-    orderDate: "2025-04-29",
-    expectedArrivalDate: "2025-05-10",
-  },
-  {
-    id: "6",
-    orderNumber: "PO2023001",
-    vendorCode: "kk7655",
-    productCategory: "裝飾品",
-    productName: "聖誕裝飾",
-    spec: "星星",
-    quantity: 50,
-    totalPrice: 2000,
-    orderDate: "2025-04-11",
-    expectedArrivalDate: "2025-05-10",
-  },
-];
 
 export default function PurchaseTempClient() {
-  const [searchQuery, setSearchQuery] = React.useState<string>("");
-  const [categoryFilter, setCategoryFilter] =
-    React.useState<string>("所有規則");
+  // 後端資料
+  const [purchaseOrderData, setPurchaseOrderData] =
+    React.useState<PurchaseOrderItem[]>([]);
+  // UI‧對話框‧搜尋‧分類
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [categoryFilter, setCategoryFilter] = React.useState("所有規則");
+  // loading / error
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const handlePurchaseOrderImport = () => {
-    setIsDialogOpen(true);
-  };
+  // 讀取資料
+  React.useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await getPurchaseOrderItems(); // 由 server action 包裝
+        if (!res) throw new Error("Server error");
+        setPurchaseOrderData(res);
+      } catch (e) {
+        setError((e as Error).message ?? "載入失敗");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
-  const totalOrders = new Set(purchaseOrderData.map((item) => item.orderNumber))
-    .size;
+  // 衍生值
+  const totalOrders = React.useMemo(
+    () => new Set(purchaseOrderData.map((i) => i.orderNumber)).size,
+    [purchaseOrderData],
+  );
   const totalItems = purchaseOrderData.length;
 
+  const productCategories = React.useMemo(() => {
+    const set = new Set(purchaseOrderData.map((i) => i.productCategory));
+    return ["所有規則", ...Array.from(set)];
+  }, [purchaseOrderData]);
+
+  const filteredData = React.useMemo(() => {
+    let data = [...purchaseOrderData];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      data = data.filter(
+        (i) =>
+          i.productName.toLowerCase().includes(q) ||
+          i.vendorCode.toLowerCase().includes(q) ||
+          i.orderNumber.toLowerCase().includes(q) ||
+          i.spec.toLowerCase().includes(q),
+      );
+    }
+    if (categoryFilter !== "所有規則") {
+      data = data.filter((i) => i.productCategory === categoryFilter);
+    }
+    return data;
+  }, [purchaseOrderData, searchQuery, categoryFilter]);
+
+  // dialog open
+  const handlePurchaseOrderImport = () => setIsDialogOpen(true);
   const clearAllFilters = () => {
     setSearchQuery("");
     setCategoryFilter("所有規則");
   };
 
-  const filteredData = React.useMemo(() => {
-    let filtered = [...purchaseOrderData];
+  // loading / error 狀態顯示
+  if (loading) return <p className="p-6">資料載入中…</p>;
+  if (error) return <p className="p-6 text-red-600">{error}</p>;
 
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (item) =>
-          item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.vendorCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.spec.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (categoryFilter !== "所有規則") {
-      filtered = filtered.filter(
-        (item) => item.productCategory === categoryFilter
-      );
-    }
-
-    return filtered;
-  }, [searchQuery, categoryFilter]);
-
-  const productCategories = React.useMemo(() => {
-    const categories = new Set(
-      purchaseOrderData.map((item) => item.productCategory)
-    );
-    return ["所有規則", ...Array.from(categories)];
-  }, []);
-
+  /* ———————— 以下維持原來 UI，僅把 purchaseOrderData 改為衍生資料 ———————— */
   return (
     <SidebarProvider
       style={
@@ -184,6 +133,7 @@ export default function PurchaseTempClient() {
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
+            {/* Header / Buttons */}
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="flex items-center justify-between px-4 lg:px-6">
                 <h1 className="text-3xl font-semibold">我的叫貨</h1>
@@ -202,13 +152,13 @@ export default function PurchaseTempClient() {
                     資料匯出
                   </Button>
                 </div>
-                
-                <PurchaseImportDialog 
-                  open={isDialogOpen} 
-                  onOpenChange={setIsDialogOpen} 
+                <PurchaseImportDialog
+                  open={isDialogOpen}
+                  onOpenChange={setIsDialogOpen}
                 />
               </div>
 
+              {/* Summary Cards */}
               <div className="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:px-6">
                 <Card className="border shadow-sm">
                   <CardContent className="flex items-center p-6">
@@ -239,6 +189,7 @@ export default function PurchaseTempClient() {
                 </Card>
               </div>
 
+              {/* Filter Bar */}
               <div className="flex flex-col gap-4 px-4 sm:flex-row sm:items-center lg:px-6">
                 <div className="flex items-center flex-1">
                   <Search className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -258,9 +209,9 @@ export default function PurchaseTempClient() {
                       <SelectValue placeholder="所有規則" />
                     </SelectTrigger>
                     <SelectContent>
-                      {productCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                      {productCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -277,6 +228,8 @@ export default function PurchaseTempClient() {
                   )}
                 </div>
               </div>
+
+              {/* Data Table */}
               <div className="px-4 lg:px-6">
                 <div className="rounded-lg border">
                   <Table>

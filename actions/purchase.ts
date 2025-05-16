@@ -3,7 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
-export async function getPurchaseItemsForClient() {
+// Direct to /purchase-temp/client.tsx --> (PurchaseOrderItem[])
+export async function getPurchaseOrderItems() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -32,20 +33,70 @@ export async function getPurchaseItemsForClient() {
     `);
 
   if (error) throw error;
+  return data;
+}
 
-  const formatted = data.map((item: any) => ({
-    id: item.item_id.toString(),
-    orderNumber: item.purchase_batches.status ?? "N/A", // 若無 order_number，暫用 status 或顯示 "N/A"
-    vendorCode: item.purchase_batches.suppliers?.supplier_name ?? "未知廠商",
-    productCategory: item.product_models.products.categories?.category_name ?? "未分類",
-    productName: item.product_models.products?.product_name ?? "未命名商品",
-    spec: item.product_models?.model_name ?? "無規格",
-    quantity: item.quantity ?? 0,
-    totalPrice: (parseFloat(item.unit_cost) || 0) * (item.quantity ?? 0),
-    orderDate: item.purchase_batches?.created_at ?? "未知日期",
-    expectedArrivalDate: "-", // 目前 select() 中無此欄位，填預設值
-    note: "-",
-  }));
 
-  return formatted;
+
+export async function createPurchaseBatch(supplierId: number) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from("purchase_batches")
+    .insert([
+      {
+        supplier_id: supplierId,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function addPurchaseItem(
+  batchId: number,
+  modelId: number,
+  quantity: number,
+  unitCost: number
+) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from("purchase_items")
+    .insert([
+      {
+        batch_id: batchId,
+        model_id: modelId,
+        quantity,
+        unit_cost: unitCost,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getPurchaseBatches() {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase.from("purchase_batches").select(`
+      *,
+      suppliers (*),
+      purchase_items (
+        *,
+        product_models (*)
+      )
+    `);
+
+  if (error) throw error;
+  return data;
 }

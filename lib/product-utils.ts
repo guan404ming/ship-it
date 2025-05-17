@@ -2,36 +2,16 @@ import {
   getGrowthComparisonPeriods,
   calculateGrowthRate
 } from "@/lib/date-utils";
-
-// 產品資料類型
-export interface SalesData {
-  date: string;
-  amount: number;
-  quantity: number;
-}
-
-export interface ProductModel {
-  id: string;
-  spec: string;
-  data: SalesData[];
-}
-
-export interface GroupedProduct {
-  id: string;
-  vendorCode: string;
-  productName: string;
-  productCategory: string;
-  models: ProductModel[];
-}
+import { SalesData, ProductSalesModel, GroupedProductSales } from "@/lib/types";
 
 /**
- * 計算產品在指定時間範圍內的銷售數據
+ * 計算商品在指定時間範圍內的銷售數據
  */
-export function getProductDateRangeData(product: GroupedProduct, startDate: Date, endDate: Date): SalesData[] {
-  // 收集所有型號的數據並按日期合併
+export function getProductDateRangeData(product: GroupedProductSales, startDate: Date, endDate: Date): SalesData[] {
+  // 收集所有規格的數據並按日期合併
   const dateMap = new Map<string, { date: string, amount: number, quantity: number }>();
 
-  product.models.forEach(model => {
+  product.models?.forEach(model => {
     model.data
       .filter(item => {
         const itemDate = new Date(item.date);
@@ -58,10 +38,10 @@ export function getProductDateRangeData(product: GroupedProduct, startDate: Date
 }
 
 /**
- * 計算產品的成長率
+ * 計算商品的成長率
  */
 export function calculateProductGrowthRates(
-  product: GroupedProduct,
+  product: GroupedProductSales,
   timeRange: string,
   customDateRange: { start: string, end: string } | null,
   referenceDate: Date = new Date("2025-05-01")
@@ -74,8 +54,8 @@ export function calculateProductGrowthRates(
     previousPeriodEnd
   } = getGrowthComparisonPeriods(timeRange, customDateRange, referenceDate);
   
-  // 獲取所有產品數據
-  const allData = product.models.flatMap(model => model.data);
+  // 獲取所有商品數據
+  const allData = product.models?.flatMap(model => model.data) || [];
   
   // 將數據分為兩個區間
   const currentPeriodData = allData.filter(item => {
@@ -103,10 +83,10 @@ export function calculateProductGrowthRates(
 }
 
 /**
- * 計算產品型號的成長率
+ * 計算商品規格的成長率
  */
 export function calculateProductModelGrowthRates(
-  model: ProductModel,
+  model: ProductSalesModel,
   timeRange: string,
   customDateRange: { start: string, end: string } | null,
   referenceDate: Date = new Date("2025-05-01")

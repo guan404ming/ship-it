@@ -1,57 +1,10 @@
-"use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { DataTable } from "@/components/data-table";
-import { SectionCards } from "@/components/section-cards";
-import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+// import { getInventoryStatus } from "@/actions/inventory";
+import { mockInventoryData } from "@/lib/data/inventory-data";
+import { InventoryClient } from "./client";
 
-import data from "../data.json";
-import { useSession } from "next-auth/react";
-import { LoginForm } from "@/components/login-form";
-import { Skeleton } from "@/components/ui/skeleton";
-export default function Page() {
-  const { data: session, status } = useSession();
+export default async function InventoryPage() {
+  // const inventory = await getInventoryStatus(); 前端先用假資料處理，後端根據假資料做調整後再接入
+  return <InventoryClient initialInventory={mockInventoryData} />;
 
-  if (status === "loading") {
-    return <Skeleton className="h-svh" />;
-  }
-
-  if (!session) {
-    return (
-      <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-        <div className="w-full max-w-sm">
-          <LoginForm />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
-              <div className="px-4 lg:px-6">
-                <ChartAreaInteractive />
-              </div>
-              <DataTable data={data} />
-            </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
-  );
 }

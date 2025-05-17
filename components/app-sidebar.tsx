@@ -6,7 +6,6 @@ import {
   IconDatabase,
   IconFileImport,
   IconFolder,
-  IconHome,
   IconInnerShadowTop,
   IconSettings,
 } from "@tabler/icons-react";
@@ -32,14 +31,8 @@ const data = {
   },
   navMain: [
     {
-      title: "首頁",
-      url: "/",
-      icon: IconHome,
-    },
-
-    {
       title: "我的庫存",
-      url: "/inventory",
+      url: "/",
       icon: IconDatabase,
     },
     {

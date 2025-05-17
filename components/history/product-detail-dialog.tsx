@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { LineChart, Line, XAxis, CartesianGrid, Legend } from "recharts"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,18 +12,16 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { getDateRange as getDateRangeUtil } from "@/lib/date-utils"
-import { 
-  ProductModel,
-  calculateProductModelGrowthRates 
-} from "@/lib/product-utils"
+import { calculateProductModelGrowthRates } from "@/lib/product-utils"
+import { ProductSalesModel } from "@/lib/types"
 
 interface ProductDetailProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  productName: string
-  productCategory: string
-  vendorCode: string
-  models: ProductModel[]
+  product_name: string
+  category_name: string 
+  sku: string
+  models: ProductSalesModel[]
 }
 
 const chartConfig = {
@@ -37,10 +35,10 @@ const chartConfig = {
   }
 } satisfies ChartConfig
 
-export function ProductDetailDialog({ open, onOpenChange, productName, productCategory, vendorCode, models }: ProductDetailProps): React.ReactNode {
+export function ProductDetailDialog({ open, onOpenChange, product_name, sku, models }: ProductDetailProps): React.ReactNode {
   const [timeRange, setTimeRange] = React.useState("90d")
   const [chartType, setChartType] = React.useState("amount")
-  const [selectedModels, setSelectedModels] = React.useState<string[]>([])
+  const [selectedModels, setSelectedModels] = React.useState<(string | number)[]>([])
   const [customDateRange, setCustomDateRange] = React.useState<{start: string, end: string} | null>(null)
   
   // 每次打開 dialog 時，自動全選所有 models
@@ -60,7 +58,7 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw] sm:max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>產品規格詳情 - {productName}</DialogTitle>
+          <DialogTitle>商品規格詳情 - {product_name}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -122,15 +120,17 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                 </div>
               )}
             </div>
-            <ToggleGroup
-              type="single"
-              value={chartType}
-              onValueChange={setChartType}
-              variant="outline"
-            >
-              <ToggleGroupItem value="amount">銷售額</ToggleGroupItem>
-              <ToggleGroupItem value="quantity">銷售量</ToggleGroupItem>
-            </ToggleGroup>
+            <div className="flex items-center">
+              <ToggleGroup
+                type="single"
+                value={chartType}
+                onValueChange={(value) => value && setChartType(value)}
+                variant="outline"
+              >
+                <ToggleGroupItem value="amount">銷售額</ToggleGroupItem>
+                <ToggleGroupItem value="quantity">銷售量</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -157,6 +157,23 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                         })
                       }}
                     />
+                    <YAxis
+                      label={{ 
+                        value: chartType === "amount" ? "銷售額" : "銷售量", 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }}
+                      tickFormatter={(value) => {
+                        if (chartType === "amount") {
+                          if (value >= 10000) {
+                            return `$${(value / 1000).toFixed(0)}k`
+                          }
+                          return `$${value}`
+                        }
+                        return value.toString()
+                      }}
+                    />
                     <ChartTooltip
                       cursor={false}
                       content={
@@ -172,140 +189,139 @@ export function ProductDetailDialog({ open, onOpenChange, productName, productCa
                       }
                     />
                     <Legend />
-                    {selectedModels.map((modelId, index) => {
-                      const model = models.find(m => m.id === modelId);
-                      if (!model) return null;
-                      
-                      const colors = [
-                        "#ff6b6b", "#4ecdc4", "#45b7d8", "#ffa94d", 
-                        "#a3a1fb", "#f06595", "#38d9a9", "#748ffc"
-                      ];
-                      const color = colors[index % colors.length];
-                      
-                      const { startDate, endDate } = getDateRange();
-                      const data = model.data.filter(item => {
-                        const date = new Date(item.date);
-                        return date >= startDate && date <= endDate;
-                      }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                      
-                      return (
-                        <Line
-                          key={`${model.id}-${chartType}`}
-                          data={data}
-                          type="monotone"
-                          dataKey={chartType}
-                          stroke={color}
-                          name={model.spec}
-                          strokeWidth={2}
-                        />
-                      );
-                    })}
+                    {models
+                      .filter(model => selectedModels.includes(model.id))
+                      .map((model, index) => {
+                        const { startDate, endDate } = getDateRange();
+                        
+                        const filteredData = model.data.filter(item => {
+                          const date = new Date(item.date);
+                          return date >= startDate && date <= endDate;
+                        });
+
+                        const colors = [
+                          "#ff6b6b", "#4ecdc4", "#45b7d8", "#ffa94d", 
+                          "#a3a1fb", "#f06595", "#38d9a9", "#748ffc"
+                        ];
+                        const color = colors[index % colors.length];
+
+                        return (
+                          <Line
+                            key={`${model.id}-${chartType}`}
+                            data={filteredData}
+                            type="monotone"
+                            dataKey={chartType}
+                            stroke={color}
+                            name={model.model_name}
+                            strokeWidth={2}
+                          />
+                        );
+                      })
+                    }
                   </LineChart>
                 </ChartContainer>
               </CardContent>
             </Card>
 
-            <div className="rounded-lg border h-fit">
-              <Table><TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      id="model-table-all"
-                      checked={selectedModels.length === models.length}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedModels(models.map(model => model.id));
-                        } else {
-                          // 保留至少一個選擇
-                          setSelectedModels([models[0].id]);
-                        }
-                      }}
-                    />
-                  </TableHead>
-                  <TableHead>規格</TableHead>
-                  <TableHead className="text-right">期間銷售量 (成長率)</TableHead>
-                  <TableHead className="text-right">期間總銷售額 (成長率)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {models.map((model) => {
-                  const isSelected = selectedModels.includes(model.id);
-                  const { startDate, endDate } = getDateRange();
-                  
-                  // 計算所選時間範圍內的數據總和
-                  const periodData = model.data.filter(item => {
-                    const date = new Date(item.date);
-                    return date >= startDate && date <= endDate;
-                  });
-                  
-                  const totalQuantity = periodData.reduce((sum, item) => sum + item.quantity, 0);
-                  const totalAmount = periodData.reduce((sum, item) => sum + item.amount, 0);
-                  
-                  // 使用工具函數計算成長率
-                  const { quantityGrowth, amountGrowth } = calculateProductModelGrowthRates(
-                    model, 
-                    timeRange, 
-                    customDateRange
-                  );
-                  
-                  return (
-                    <TableRow key={model.id}>
-                      <TableCell>
-                        <Checkbox
-                          id={`model-table-${model.id}`}
-                          checked={isSelected}
+            {/* 規格選擇與比較表格 */}
+            <Card className="border h-fit">
+              <CardContent className="pt-2">
+                <Table>
+                  <TableHeader> 
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox 
+                          id="select-all-models"
+                          checked={selectedModels.length === models.length}
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              setSelectedModels([...selectedModels, model.id]);
+                              setSelectedModels(models.map(model => model.id));
                             } else {
-                              // 確保至少保留一個規格
-                              if (selectedModels.length > 1) {
-                                setSelectedModels(selectedModels.filter(id => id !== model.id));
-                              }
+                              setSelectedModels([]);
                             }
                           }}
                         />
-                      </TableCell>
-                      <TableCell>{model.spec}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        <div className="flex items-center justify-end">
-                          <span>{totalQuantity}</span>
-                          {quantityGrowth !== undefined && (
-                            <span 
-                              className={`ml-2 text-xs ${quantityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                            >
-                              {quantityGrowth >= 0 ? '↑' : '↓'} {Math.abs(quantityGrowth)}%
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        <div className="flex items-center justify-end">
-                          <span>$ {totalAmount.toLocaleString()}</span>
-                          {amountGrowth !== undefined && (
-                            <span 
-                              className={`ml-2 text-xs ${amountGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                            >
-                              {amountGrowth >= 0 ? '↑' : '↓'} {Math.abs(amountGrowth)}%
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
+                      </TableHead>
+                      <TableHead>規格</TableHead>
+                      <TableHead className="text-right">期間銷售量</TableHead>
+                      <TableHead className="text-right">成長率</TableHead>
+                      <TableHead className="text-right">期間銷售額</TableHead>
+                      <TableHead className="text-right">成長率</TableHead>
                     </TableRow>
-                  )
-                })}
-              </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {models.map(model => {
+                      const isSelected = selectedModels.includes(model.id);
+                      const { startDate, endDate } = getDateRange();
+                      
+                      // 過濾日期範圍內的數據
+                      const filteredData = model.data.filter(item => {
+                        const date = new Date(item.date);
+                        return date >= startDate && date <= endDate;
+                      });
+                      
+                      // 計算總和和成長率
+                      const totalQuantity = filteredData.reduce((sum, item) => sum + item.quantity, 0);
+                      const totalAmount = filteredData.reduce((sum, item) => sum + item.amount, 0);
+                      
+                      // 計算成長率
+                      const { quantityGrowth, amountGrowth } = calculateProductModelGrowthRates(
+                        model,
+                        timeRange,
+                        customDateRange,
+                        new Date("2025-05-01")
+                      );
+                      
+                      return (
+                        <TableRow key={model.id} className={isSelected ? "bg-muted/50" : ""}>
+                          <TableCell>
+                            <Checkbox
+                              id={`model-${model.id}`}
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedModels([...selectedModels, model.id]);
+                                } else {
+                                  setSelectedModels(selectedModels.filter(id => id !== model.id));
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>{model.model_name}</TableCell>
+                          <TableCell className="text-right font-mono">{totalQuantity}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {quantityGrowth !== undefined && (
+                              <span 
+                                className={`${quantityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                              >
+                                {quantityGrowth >= 0 ? '↑' : '↓'} {Math.abs(quantityGrowth)}%
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">$ {totalAmount.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {amountGrowth !== undefined && (
+                              <span 
+                                className={`${amountGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                              >
+                                {amountGrowth >= 0 ? '↑' : '↓'} {Math.abs(amountGrowth)}%
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </div>
           
-          <div className="text-sm text-muted-foreground mt-4">
-            <p>
-              <strong>產品資訊:</strong> {productName} ({productCategory}) - 廠商代碼: {vendorCode}
-            </p>
-            <p>
-              <strong>備註:</strong> 成長率表示相較於前一個相同時間區間的變化率。例如，選擇最近7天時，會比較與前7天的數據。
-            </p>
+          <div className="flex justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              商品：{product_name}<br/>
+              供應商：{sku}
+            </div>
           </div>
         </div>
       </DialogContent>

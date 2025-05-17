@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import {
-  FileDown,
   FileUp,
   PackageIcon,
   PlusCircle,
   Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Trash2,
 } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -23,123 +26,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
-
-type PurchaseOrderItem = {
-  id: string;
-  orderNumber: string;
-  vendorCode: string;
-  productCategory: string;
-  productName: string;
-  spec: string;
-  quantity: number;
-  totalPrice: number;
-  orderDate: string;
-  expectedArrivalDate: string;
-  note?: string;
-};
-
-const purchaseOrderData: PurchaseOrderItem[] = [
-  {
-    id: "1",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "長頸鹿款",
-    quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
-  },
-  {
-    id: "2",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "海豚款",
-    quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
-  },
-  {
-    id: "3",
-    orderNumber: "PO2023001",
-    vendorCode: "fju3299",
-    productCategory: "兒童玩具",
-    productName: "拼圖",
-    spec: "海豚款",
-    quantity: 200,
-    totalPrice: 10000,
-    orderDate: "2025-05-15",
-    expectedArrivalDate: "2025-05-30",
-  },
-  {
-    id: "4",
-    orderNumber: "PO2023001",
-    vendorCode: "jde2088",
-    productCategory: "服飾",
-    productName: "兒童外套",
-    spec: "黑色",
-    quantity: 110,
-    totalPrice: 5000,
-    orderDate: "2025-04-29",
-    expectedArrivalDate: "2025-05-10",
-  },
-  {
-    id: "5",
-    orderNumber: "PO2023001",
-    vendorCode: "jde2088",
-    productCategory: "服飾",
-    productName: "兒童外套",
-    spec: "粉色",
-    quantity: 100,
-    totalPrice: 6000,
-    orderDate: "2025-04-29",
-    expectedArrivalDate: "2025-05-10",
-  },
-  {
-    id: "6",
-    orderNumber: "PO2023001",
-    vendorCode: "kk7655",
-    productCategory: "裝飾品",
-    productName: "聖誕裝飾",
-    spec: "星星",
-    quantity: 50,
-    totalPrice: 2000,
-    orderDate: "2025-04-11",
-    expectedArrivalDate: "2025-05-10",
-  },
-];
+import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
+import { purchaseOrderData } from "@/lib/data/purchase-data";
 
 export default function PurchaseTempClient() {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
-  const [categoryFilter, setCategoryFilter] =
-    React.useState<string>("所有規則");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedRows, setSelectedRows] = React.useState<Record<string, boolean>>({});
+  const [sortField, setSortField] = React.useState<"created_at" | "expected_arrival">("created_at");
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
   const handlePurchaseOrderImport = () => {
     setIsDialogOpen(true);
   };
 
-  const totalOrders = new Set(purchaseOrderData.map((item) => item.orderNumber))
+  const totalOrders = new Set(purchaseOrderData.map((item) => item.batch_id))
     .size;
   const totalItems = purchaseOrderData.length;
-
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setCategoryFilter("所有規則");
-  };
 
   const filteredData = React.useMemo(() => {
     let filtered = [...purchaseOrderData];
@@ -147,28 +52,100 @@ export default function PurchaseTempClient() {
     if (searchQuery) {
       filtered = filtered.filter(
         (item) =>
-          item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.vendorCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.spec.toLowerCase().includes(searchQuery.toLowerCase())
+          item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.model_name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    if (categoryFilter !== "所有規則") {
-      filtered = filtered.filter(
-        (item) => item.productCategory === categoryFilter
-      );
-    }
+    // Sort data based on the selected sort field and direction
+    filtered.sort((a, b) => {
+      // Parse dates for proper comparison
+      const dateA = new Date(a[sortField]);
+      const dateB = new Date(b[sortField]);
+      
+      // Compare dates
+      if (sortDirection === "asc") {
+        return dateA.getTime() - dateB.getTime();
+      } else {
+        return dateB.getTime() - dateA.getTime();
+      }
+    });
 
     return filtered;
-  }, [searchQuery, categoryFilter]);
+  }, [searchQuery, sortField, sortDirection]);
 
-  const productCategories = React.useMemo(() => {
-    const categories = new Set(
-      purchaseOrderData.map((item) => item.productCategory)
-    );
-    return ["所有規則", ...Array.from(categories)];
-  }, []);
+  // Toggle a single row selection
+  const toggleRowSelection = (id: string) => {
+    setSelectedRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Toggle all rows selection
+  const toggleAllRows = () => {
+    if (Object.keys(selectedRows).length === filteredData.length && 
+        Object.values(selectedRows).every(selected => selected)) {
+      // If all are selected, clear selection
+      setSelectedRows({});
+    } else {
+      // Otherwise, select all filtered rows
+      const newSelectedRows: Record<string, boolean> = {};
+      filteredData.forEach(item => {
+        newSelectedRows[item.id] = true;
+      });
+      setSelectedRows(newSelectedRows);
+    }
+  };
+
+  // Check if all filtered rows are selected
+  const areAllRowsSelected = 
+    filteredData.length > 0 && 
+    filteredData.every(item => selectedRows[item.id]);
+    
+  // Handle column sorting
+  const handleSort = (field: "created_at" | "expected_arrival") => {
+    if (sortField === field) {
+      // Toggle sort direction if the same field is clicked again
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new sort field and default to ascending
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+  
+  // Get selected items count
+  const selectedItemsCount = Object.values(selectedRows).filter(Boolean).length;
+  
+  // Get selected items data
+  const getSelectedItemsData = () => {
+    return filteredData.filter(item => selectedRows[item.id]);
+  };
+  
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    // Placeholder for future implementation
+    console.log("以下項目將被刪除:", getSelectedItemsData());
+    alert(`已選擇 ${selectedItemsCount} 個項目準備刪除`);
+    
+    // Here you would implement the actual delete logic in a real application
+    // For now, just clear the selection
+    setSelectedRows({});
+  };
+  
+  // Handle marking items as delivered
+  const handleMarkAsDelivered = () => {
+    // Placeholder for future implementation
+    console.log("以下項目將被標記為已送達:", getSelectedItemsData());
+    alert(`已標記 ${selectedItemsCount} 個項目為已送達`);
+    
+    // Here you would implement the actual API call to update the status
+    // For now, just clear the selection
+    setSelectedRows({});
+  };
+  
 
   return (
     <SidebarProvider
@@ -197,15 +174,12 @@ export default function PurchaseTempClient() {
                     <PlusCircle className="mr-2 h-4 w-4" />
                     新增叫貨
                   </Button>
-                  <Button variant="outline" size="sm" className="h-10 px-4">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    資料匯出
-                  </Button>
                 </div>
                 
                 <PurchaseImportDialog 
                   open={isDialogOpen} 
-                  onOpenChange={setIsDialogOpen} 
+                  onOpenChange={setIsDialogOpen}
+                  selectedItems={[]}
                 />
               </div>
 
@@ -216,7 +190,7 @@ export default function PurchaseTempClient() {
                       <FileUp className="h-6 w-6 text-[#08678C]" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm text-muted-foreground">總進貨單</p>
+                      <p className="text-sm text-muted-foreground">總叫貨單</p>
                       <h2 className="text-3xl font-bold text-[#08678C]">
                         {totalOrders}
                       </h2>
@@ -248,31 +222,39 @@ export default function PurchaseTempClient() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full max-w-sm h-10"
                   />
+                  
+                  {/* 當有選擇項目時顯示的操作按鈕 */}
+                  {selectedItemsCount > 0 && (
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleMarkAsDelivered}
+                        className="bg-[#08678C]"
+                      >
+                        <PackageIcon className="mr-2 h-4 w-4" />
+                        標記為已送達 ({selectedItemsCount})
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        刪除 ({selectedItemsCount})
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 items-center">
-                  <Select
-                    value={categoryFilter}
-                    onValueChange={setCategoryFilter}
-                  >
-                    <SelectTrigger className="w-[140px] h-10">
-                      <SelectValue placeholder="所有規則" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {(searchQuery || categoryFilter !== "所有規則") && (
+                  {searchQuery && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={clearAllFilters}
+                      onClick={() => setSearchQuery("")}
                       className="h-10"
                     >
-                      清除篩選
+                      清除搜尋
                     </Button>
                   )}
                 </div>
@@ -283,40 +265,79 @@ export default function PurchaseTempClient() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">
-                          <Checkbox />
+                          <Checkbox 
+                            checked={areAllRowsSelected}
+                            onCheckedChange={toggleAllRows}
+                            aria-label="Select all"
+                          />
                         </TableHead>
-                        <TableHead>進貨單號</TableHead>
                         <TableHead>廠商名稱</TableHead>
-                        <TableHead>產品分類</TableHead>
-                        <TableHead>產品名稱</TableHead>
+                        <TableHead>商品名稱</TableHead>
                         <TableHead>規格</TableHead>
                         <TableHead className="text-right">數量</TableHead>
-                        <TableHead className="text-right">總價</TableHead>
-                        <TableHead>叫貨日期</TableHead>
-                        <TableHead>預計到貨日</TableHead>
+                        <TableHead className="text-right">單價</TableHead>
+                        <TableHead>
+                          <button 
+                            className="flex items-center gap-1 focus:outline-none hover:text-primary"
+                            onClick={() => handleSort("created_at")}
+                          >
+                            <span>叫貨日期</span>
+                            {sortField === "created_at" ? (
+                              sortDirection === "asc" ? (
+                                <ArrowUp className="h-4 w-4" />
+                              ) : (
+                                <ArrowDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 opacity-50" />
+                            )}
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button 
+                            className="flex items-center gap-1 focus:outline-none hover:text-primary"
+                            onClick={() => handleSort("expected_arrival")}
+                          >
+                            <span>預計到貨日</span>
+                            {sortField === "expected_arrival" ? (
+                              sortDirection === "asc" ? (
+                                <ArrowUp className="h-4 w-4" />
+                              ) : (
+                                <ArrowDown className="h-4 w-4" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 opacity-50" />
+                            )}
+                          </button>
+                        </TableHead>
                         <TableHead>備註</TableHead>
+                        <TableHead>動作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredData.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>
-                            <Checkbox />
+                            <Checkbox
+                              checked={selectedRows[item.id] || false}
+                              onCheckedChange={() => toggleRowSelection(item.id)}
+                            />
                           </TableCell>
-                          <TableCell>{item.orderNumber}</TableCell>
-                          <TableCell>{item.vendorCode}</TableCell>
-                          <TableCell>{item.productCategory}</TableCell>
-                          <TableCell>{item.productName}</TableCell>
-                          <TableCell>{item.spec}</TableCell>
+                          <TableCell>{item.supplier_name}</TableCell>
+                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell>{item.model_name}</TableCell>
                           <TableCell className="text-right font-mono">
                             {item.quantity}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {item.totalPrice}
+                            {item.unit_cost}
                           </TableCell>
-                          <TableCell>{item.orderDate}</TableCell>
-                          <TableCell>{item.expectedArrivalDate}</TableCell>
+                          <TableCell>{item.created_at}</TableCell>
+                          <TableCell>{item.expected_arrival}</TableCell>
                           <TableCell>{item.note || "-"}</TableCell>
+                          <TableCell>
+                            <PurchaseEditDialog purchaseId={item.id} />
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

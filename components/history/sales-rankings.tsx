@@ -9,29 +9,18 @@ import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { getDateRange as getDateRangeUtil, calculateGrowthRate } from "@/lib/date-utils"
 
-interface RankingProduct {
-  id: string
-  vendorCode: string
-  productName: string
-  productCategory: string
-  spec: string
-  sales: number
-  quantity?: number
-  growth?: number
-  returns?: number
-  date?: string
-}
+import { RankingProduct } from "@/lib/types"
 
 interface SalesRankingProps {
   productRankingData: RankingProduct[]
 }
 
 /**
- * 計算產品在兩個時間段的銷售和數量總和
+ * 計算商品在兩個時間段的銷售和數量總和
  */
 function calculatePeriodTotals(
   products: RankingProduct[], 
-  key: string,  // 唯一產品鍵
+  key: string,  // 唯一商品鍵
   currentPeriodStart: Date, 
   currentPeriodEnd: Date,
   previousPeriodStart: Date,
@@ -42,20 +31,20 @@ function calculatePeriodTotals(
   currentQuantity: number,
   previousQuantity: number
 } {
-  // 篩選當前期間產品
+  // 篩選當前期間商品
   const currentProducts = products.filter(p => {
     if (!p.date) return false;
     const date = new Date(p.date);
     return date >= currentPeriodStart && date <= currentPeriodEnd &&
-           `${p.vendorCode}-${p.productName}-${p.productCategory}` === key;
+           `${p.sku}-${p.product_name}-${p.category_name}` === key;
   });
   
-  // 篩選前一期間產品
+  // 篩選前一期間商品
   const previousProducts = products.filter(p => {
     if (!p.date) return false;
     const date = new Date(p.date);
     return date >= previousPeriodStart && date <= previousPeriodEnd &&
-           `${p.vendorCode}-${p.productName}-${p.productCategory}` === key;
+           `${p.sku}-${p.product_name}-${p.category_name}` === key;
   });
   
   // 計算當前期間總和
@@ -122,7 +111,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
     };
   }, [timeRange, customDateRange]);
 
-  // 過濾數據並按產品聚合
+  // 過濾數據並按商品聚合
   const filteredAndAggregatedData = React.useMemo(() => {
     const { startDate, endDate } = getDateRange();
     const {
@@ -134,17 +123,17 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
     
     // 依日期篩選數據
     const filteredData = productRankingData.filter(product => {
-      if (!product.date) return true; // 包含沒有日期的產品
+      if (!product.date) return true; // 包含沒有日期的商品
       const productDate = new Date(product.date);
       return productDate >= startDate && productDate <= endDate;
     });
 
-    // 按產品聚合
+    // 按商品聚合
     const aggregatedMap = new Map<string, {
       id: string,
-      vendorCode: string,
-      productName: string,
-      productCategory: string,
+      sku: string,
+      product_name: string,
+      category_name: string,
       sales: number,
       quantity: number,
       salesGrowth?: number,
@@ -154,7 +143,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
 
     filteredData.forEach(product => {
       // 創建唯一鍵，忽略規格
-      const key = `${product.vendorCode}-${product.productName}-${product.productCategory}`;
+      const key = `${product.sku}-${product.product_name}-${product.category_name}`;
       
       // 計算兩個時間段的總和
       const totals = calculatePeriodTotals(
@@ -183,9 +172,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
       } else {
         aggregatedMap.set(key, {
           id: key,
-          vendorCode: product.vendorCode,
-          productName: product.productName,
-          productCategory: product.productCategory,
+          sku: product.sku,
+          product_name: product.product_name,
+          category_name: product.category_name,
           sales: product.sales,
           quantity: product.quantity || 0,
           specifications: 1,
@@ -341,9 +330,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商</TableHead>
-              <TableHead>品名</TableHead>
-              <TableHead>產品分類</TableHead>
+              <TableHead>廠商名稱</TableHead>
+              <TableHead>商品</TableHead>
+              <TableHead>商品分類</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
@@ -355,9 +344,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -384,9 +373,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商</TableHead>
+              <TableHead>廠商名稱</TableHead>
               <TableHead>品名</TableHead>
-              <TableHead>產品分類</TableHead>
+              <TableHead>商品分類</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
@@ -398,9 +387,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -427,9 +416,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商</TableHead>
+              <TableHead>廠商名稱</TableHead>
               <TableHead>品名</TableHead>
-              <TableHead>產品分類</TableHead>
+              <TableHead>商品分類</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
@@ -441,9 +430,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -466,9 +455,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商</TableHead>
+              <TableHead>廠商名稱</TableHead>
               <TableHead>品名</TableHead>
-              <TableHead>產品分類</TableHead>
+              <TableHead>商品分類</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
@@ -480,9 +469,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                 
                 return (
                   <TableRow key={product.id}>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productName}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_name}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
                     <TableCell>
                       {rankingMetric === "sales" 
@@ -509,8 +498,8 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
             <p>
               時間範圍：可選擇預設時間區間（7天、30天、90天、180天），或設定自訂日期範圍<br />
               數據選擇：可切換銷售額或銷售量來檢視不同指標的排名<br />
-              成長率計算：成長率表示該產品在所選時間區間與前一個相同長度時間區間相比的變化率<br />
-              規格數：表示同一產品下不同規格的數量
+              成長率計算：成長率表示該商品在所選時間區間與前一個相同長度時間區間相比的變化率<br />
+              規格數：表示同一商品下不同規格的數量
             </p>
           </CardContent>
         </Card>

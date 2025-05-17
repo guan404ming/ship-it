@@ -10,6 +10,19 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { createPurchaseBatch, addPurchaseItem } from "@/actions/purchase";
+import { ModelItem, StockRecordWithModel } from "@/lib/types";
+
+// Local interface - different from database PurchaseItem
+interface PurchaseItem {
+  id: number;
+  isVisible: boolean;
+  product_name: string;
+  quantity: number;
+  model_id?: number;
+  product_id?: number;
+  models: ModelItem[]; 
+  note?: string;
+}
 import {
   Dialog,
   DialogContent,
@@ -19,27 +32,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-interface ModelItem {
-  id: number;
-  name: string;
-  quantity: number;
-}
-
-interface PurchaseItem {
-  id: number;
-  isVisible: boolean;
-  productName: string;
-  quantity: number;
-  modelId?: number;
-  productId?: number;
-  models: ModelItem[]; 
-  notes?: string;
-}
 
 interface PurchaseImportDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  selectedItems?: StockRecordWithModel[];
 }
 
 type ModelRowProps = {
@@ -53,7 +51,7 @@ const ModelRow = ({ model, onNameChange, onQuantityChange, onRemove }: ModelRowP
   <div className="grid grid-cols-12 gap-4 p-2 items-center">
     <div className="col-span-6">
       <Input 
-        placeholder="輸入型號名稱" 
+        placeholder="輸入規格名稱" 
         value={model.name}
         onChange={(e) => onNameChange(e.target.value)}
         className="h-10 w-full"
@@ -113,13 +111,13 @@ const ProductCard = ({
               <Input 
                 placeholder="輸入商品名稱" 
                 className="w-100"
-                value={item.productName}
+                value={item.product_name}
                 onChange={(e) => onProductNameChange(e.target.value)}
               />
               {item.models.length > 0 && (
                 <div className="mt-1">
                   <p className="text-xs text-blue-600">
-                    {item.models.length} 種型號，共 {item.models.reduce((sum, model) => sum + model.quantity, 0)} 件
+                    {item.models.length} 種規格，共 {item.models.reduce((sum, model) => sum + model.quantity, 0)} 件
                   </p>
                 </div>
               )}
@@ -141,12 +139,12 @@ const ProductCard = ({
 
         <div>
           <label className="text-sm font-medium mb-2 block">
-            商品型號
+            商品規格
           </label>
           
           <div className="border rounded-md overflow-hidden mb-2">
             <div className="grid grid-cols-12 gap-4 bg-muted p-2 text-sm font-medium">
-              <div className="col-span-6">型號名稱</div>
+              <div className="col-span-6">規格名稱</div>
               <div className="col-span-4">數量</div>
               <div className="col-span-2 text-right">操作</div>
             </div>
@@ -165,7 +163,7 @@ const ProductCard = ({
               </div>
             ) : (
               <div className="p-4 text-center text-muted-foreground text-sm">
-                尚未添加型號，請點擊下方按鈕添加
+                尚未添加規格，請點擊下方按鈕添加
               </div>
             )}
           </div>
@@ -178,7 +176,7 @@ const ProductCard = ({
             className="w-full"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
-            新增型號
+            新增規格
           </Button>
         </div>
       </div>
@@ -199,23 +197,119 @@ export function PurchaseImportDialog({
   trigger,
   open,
   onOpenChange,
+  selectedItems = [],
 }: PurchaseImportDialogProps) {
   const router = useRouter();
   const [orderItems, setOrderItems] = React.useState<PurchaseItem[]>([
-    { id: 1, isVisible: true, productName: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
-    { id: 2, isVisible: true, productName: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+    { id: 1, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+    { id: 2, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
   ]);
   const [totalItems, setTotalItems] = React.useState(2);
   const [totalQuantity, setTotalQuantity] = React.useState(100);
   const [supplierId, setSupplierId] = React.useState<number | null>(null);
-
+  const [orderDate, setOrderDate] = React.useState<string>(() => {
+    // Set default order date to today
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  });
+  const [expectedDeliveryDays, setExpectedDeliveryDays] = React.useState<number>(7); // Default to 7 days
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = React.useState<string>(() => {
+    // Calculate default expected delivery date (7 days from today)
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  });
+  
+  // Use a ref to track if we've already processed the selected items to prevent infinite loops
+  const processedRef = React.useRef(false);
+  const selectedItemsRef = React.useRef(selectedItems);
+  
+  // Store selectedItems in a ref to avoid dependency issues
   React.useEffect(() => {
+    selectedItemsRef.current = selectedItems;
+  }, [selectedItems]);
+  
+  // Initialize order items from selected inventory items when the dialog opens
+  React.useEffect(() => {
+    // Reset the ref when dialog opens/closes
+    if (!open) {
+      processedRef.current = false;
+      
+      // Reset if dialog closes
+      setOrderItems([
+        { id: 1, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+        { id: 2, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+      ]);
+      setTotalItems(2);
+      return;
+    }
+    
+    // Only process selected items once when dialog opens
+    const items = selectedItemsRef.current;
+    if (open && items && items.length > 0 && !processedRef.current) {
+      processedRef.current = true;
+      
+      // Group items by product to group same products with different models
+      const groupedByProduct: Record<string, StockRecordWithModel[]> = {};
+      
+      items.forEach(item => {
+        const productId = item.product_models.product_id?.toString() || '';
+        if (!groupedByProduct[productId]) {
+          groupedByProduct[productId] = [];
+        }
+        groupedByProduct[productId].push(item);
+      });
+      
+      // Convert grouped items to purchase items
+      const initialItems: PurchaseItem[] = Object.entries(groupedByProduct).map(([productId, items], index) => {
+        // Get first item for product name
+        const firstItem = items[0];
+        const productName = firstItem.product_models.products.product_name || '';
+        
+        // Convert each variant to a model
+        const models: ModelItem[] = items.map((item, modelIndex) => ({
+          id: modelIndex + 1,
+          name: item.product_models.model_name || '',
+          quantity: 1 // Suggest order quantity based on current stock
+        }));
+        
+        return {
+          id: index + 1,
+          isVisible: true,
+          product_name: productName,
+          quantity: models.reduce((sum, model) => sum + model.quantity, 0),
+          product_id: Number(productId),
+          models,
+        };
+      });
+      
+      if (initialItems.length > 0) {
+        setOrderItems(initialItems);
+        setTotalItems(initialItems.length);
+      }
+    }
+  }, [open]);
+
+  // Calculate total quantity whenever orderItems changes
+  React.useEffect(() => {
+    // Use a comparison to prevent unnecessary state updates that could cause infinite loops
     const newTotalQuantity = orderItems.reduce(
       (sum, item) => sum + item.models.reduce((modelSum, model) => modelSum + model.quantity, 0), 
       0
     );
-    setTotalQuantity(newTotalQuantity);
-  }, [orderItems]);
+    
+    if (newTotalQuantity !== totalQuantity) {
+      setTotalQuantity(newTotalQuantity);
+    }
+  }, [orderItems, totalQuantity]);
+
+  // Update expected delivery date when order date or expected delivery days change
+  React.useEffect(() => {
+    const date = new Date(orderDate);
+    date.setDate(date.getDate() + expectedDeliveryDays);
+    setExpectedDeliveryDate(date.toISOString().split('T')[0]);
+  }, [orderDate, expectedDeliveryDays]);
+  
   const addNewItem = () => {
     const newId = orderItems.length === 0
       ? 1 
@@ -226,9 +320,9 @@ export function PurchaseImportDialog({
       { 
         id: newId, 
         isVisible: true, 
-        productName: "", 
+        product_name: "", 
         quantity: 0, 
-        models: [{ id: 1, name: "", quantity: 1 }], // 預設一個型號
+        models: [{ id: 1, name: "", quantity: 1 }], // 預設一個規格
       },
     ]);
     setTotalItems(totalItems + 1);
@@ -241,7 +335,7 @@ export function PurchaseImportDialog({
   const handleProductNameChange = (id: number, value: string) => {
     setOrderItems(
       orderItems.map((item) =>
-        item.id === id ? { ...item, productName: value } : item
+        item.id === id ? { ...item, product_name: value } : item
       )
     );
   };
@@ -332,18 +426,18 @@ export function PurchaseImportDialog({
       return;
     }
     
-    if (orderItems.some(item => !item.productName)) {
+    if (orderItems.some(item => !item.product_name)) {
       alert("請確保所有商品都填寫了商品名稱");
       return;
     }
     
     if (orderItems.some(item => item.models.length === 0)) {
-      alert("每個商品至少需要添加一個型號");
+      alert("每個商品至少需要添加一個規格");
       return;
     }
     
     if (orderItems.some(item => item.models.some(model => !model.name.trim()))) {
-      alert("請確保所有型號都有名稱");
+      alert("請確保所有規格都有名稱");
       return;
     }
 
@@ -359,15 +453,16 @@ export function PurchaseImportDialog({
     });
     
     if (hasDuplicateModels) {
-      alert("同一個商品不能有重複的型號名稱，請修改後再提交");
+      alert("同一個商品不能有重複的規格名稱，請修改後再提交");
       return;
     }
 
     try {
-      const batch = await createPurchaseBatch(supplierId);
+      // Include order date and expected delivery date in the batch creation
+      const batch = await createPurchaseBatch(supplierId, orderDate, expectedDeliveryDate);
       
       for (const item of orderItems) {
-        console.log(`Processing product: ${item.productName} with ${item.models.length} models`);
+        console.log(`Processing product: ${item.product_name} with ${item.models.length} models`);
         
         for (const model of item.models) {
           const modelId = Math.floor(Math.random() * 10000); // 模擬生成 modelId
@@ -394,7 +489,7 @@ export function PurchaseImportDialog({
 
   const getUniqueProductCount = () => {
     return new Set(
-      orderItems.map((item) => item.productName).filter(name => name !== "")
+      orderItems.map((item) => item.product_name).filter(name => name !== "")
     ).size;
   };
 
@@ -422,13 +517,28 @@ export function PurchaseImportDialog({
           <label className="text-sm font-medium mb-2 block">
             叫貨日期
           </label>
-          <Input type="date" placeholder="yyyy/mm/dd" />
+          <Input 
+            type="date" 
+            placeholder="yyyy/mm/dd" 
+            value={orderDate}
+            onChange={(e) => setOrderDate(e.target.value)}
+          />
         </div>
         <div>
           <label className="text-sm font-medium mb-2 block">
-            預計到貨日
+            預計到貨天數
           </label>
-          <Input type="date" placeholder="yyyy/mm/dd" />
+          <div className="flex items-center gap-2">
+            <Input
+              value={expectedDeliveryDays}
+              onChange={(e) => setExpectedDeliveryDays(Number(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">天後</span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            預計到貨日期：{expectedDeliveryDate}
+          </p>
         </div>
       </div>
       <div className="my-6">

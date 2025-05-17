@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { LineChart, Line, XAxis, CartesianGrid, Legend } from "recharts"
-import { Search, ExternalLink } from "lucide-react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
+import { Search, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,24 +17,121 @@ import { ProductDetailDialog } from "./product-detail-dialog"
 import { 
   getDateRange as getDateRangeUtil
 } from "@/lib/date-utils"
-import { 
-  GroupedProduct, 
-  SalesData,
-  getProductDateRangeData, 
-  calculateProductGrowthRates 
-} from "@/lib/product-utils"
+import { SalesData } from "@/lib/types"
+import { getGrowthComparisonPeriods, calculateGrowthRate } from "@/lib/date-utils"
 
-interface ProductSalesData {
-  id: string
-  vendorCode: string
-  productName: string
-  productCategory: string
-  spec: string
-  data: SalesData[]
+// 本地函式用於類型兼容性
+function getProductDateRangeData(product: GroupedProduct, startDate: Date, endDate: Date): SalesData[] {
+  // Only process if models exist
+  if (!product.models) return [];
+  
+  const dateMap = new Map<string, { date: string, amount: number, quantity: number }>();
+
+  product.models.forEach(model => {
+    model.data
+      .filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= startDate && itemDate <= endDate;
+      })
+      .forEach(item => {
+        if (dateMap.has(item.date)) {
+          const existing = dateMap.get(item.date)!;
+          dateMap.set(item.date, {
+            date: item.date,
+            amount: existing.amount + item.amount,
+            quantity: existing.quantity + item.quantity
+          });
+        } else {
+          dateMap.set(item.date, { ...item });
+        }
+      });
+  });
+
+  return Array.from(dateMap.values()).sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+}
+
+function calculateProductGrowthRates(
+  product: GroupedProduct,
+  timeRange: string,
+  customDateRange: { start: string, end: string } | null,
+  referenceDate: Date = new Date("2025-05-01")
+): { quantityGrowth?: number, amountGrowth?: number } {
+  if (!product.models) return {};
+  
+  // 獲取比較期間
+  const {
+    currentPeriodStart,
+    currentPeriodEnd,
+    previousPeriodStart,
+    previousPeriodEnd
+  } = getGrowthComparisonPeriods(timeRange, customDateRange, referenceDate);
+  
+  // 獲取所有商品數據
+  const allData = product.models.flatMap(model => model.data);
+  
+  // 將數據分為兩個區間
+  const currentPeriodData = allData.filter(item => {
+    const date = new Date(item.date);
+    return date >= currentPeriodStart && date <= currentPeriodEnd;
+  });
+  
+  const previousPeriodData = allData.filter(item => {
+    const date = new Date(item.date);
+    return date >= previousPeriodStart && date <= previousPeriodEnd;
+  });
+  
+  // 計算當前區間和前一區間的總量
+  const currentQuantity = currentPeriodData.reduce((sum, item) => sum + item.quantity, 0);
+  const previousQuantity = previousPeriodData.reduce((sum, item) => sum + item.quantity, 0);
+  
+  const currentAmount = currentPeriodData.reduce((sum, item) => sum + item.amount, 0);
+  const previousAmount = previousPeriodData.reduce((sum, item) => sum + item.amount, 0);
+  
+  // 計算成長率
+  const quantityGrowth = calculateGrowthRate(currentQuantity, previousQuantity);
+  const amountGrowth = calculateGrowthRate(currentAmount, previousAmount);
+  
+  return { quantityGrowth, amountGrowth };
+}
+
+// 本地接口定義
+interface ProductModel {
+  id: string;
+  model_name: string;
+  data: SalesData[];
+}
+
+interface GroupedProduct {
+  id: string;
+  sku: string;
+  product_name: string;
+  models: ProductModel[];
+}
+
+interface FlatProduct {
+  id: string | number;
+  sku: string;
+  product_name: string;
+  category_name: string;
+  model_name?: string;
+  data?: SalesData[];
 }
 
 interface ProductPerformanceProps {
-  productSalesData: ProductSalesData[]
+  productSalesData: FlatProduct[]
+}
+
+// 定義排序類型
+type SortField = 'quantity' | 'quantityGrowth' | 'amount' | 'amountGrowth';
+type SortDirection = 'asc' | 'desc';
+
+interface SortableProduct extends GroupedProduct {
+  totalQuantity: number;
+  totalAmount: number;
+  quantityGrowth?: number;
+  amountGrowth?: number;
 }
 
 const chartConfig = {
@@ -54,10 +151,13 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
   const [chartType, setChartType] = React.useState("amount")
   const [selectedProducts, setSelectedProducts] = React.useState<string[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [categoryFilter, setCategoryFilter] = React.useState<string>("所有類別")
   const [detailDialogOpen, setDetailDialogOpen] = React.useState(false)
   const [selectedProductForDetail, setSelectedProductForDetail] = React.useState<string | null>(null)
   const [customDateRange, setCustomDateRange] = React.useState<{start: string, end: string} | null>(null)
+  
+  // 排序狀態
+  const [sortField, setSortField] = React.useState<SortField>('quantity')
+  const [sortDirection, setSortDirection] = React.useState<SortDirection>('desc')
 
   React.useEffect(() => {
     if (isMobile) {
@@ -65,31 +165,22 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
     }
   }, [isMobile])
 
-  const productCategories = React.useMemo(() => {
-    const categories = new Set(
-      productSalesData.map((item) => item.productCategory)
-    )
-    return ["所有類別", ...Array.from(categories)]
-  }, [productSalesData])
-
-
   const groupedProductsData = React.useMemo(() => {
-    // 1. 按產品名稱進行分組
+    // 1. 按商品名稱進行分組
     const groupedByName = productSalesData.reduce((acc, product) => {
-      const key = `${product.productName}-${product.productCategory}-${product.vendorCode}`;
+      const key = `${product.product_name}-${product.sku}`;
       if (!acc[key]) {
         acc[key] = {
           id: key,
-          vendorCode: product.vendorCode,
-          productName: product.productName,
-          productCategory: product.productCategory,
+          sku: product.sku,
+          product_name: product.product_name,
           models: []
         };
       }
       acc[key].models.push({
-        id: product.id,
-        spec: product.spec,
-        data: product.data
+        id: product.id.toString(),
+        model_name: product.model_name || "",
+        data: product.data || []
       });
       return acc;
     }, {} as Record<string, GroupedProduct>);
@@ -120,8 +211,94 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
       });
   }, [selectedProducts, groupedProductsData, getDateRange]);
 
+  // 排序處理函數
+  const handleSortChange = (field: SortField) => {
+    if (sortField === field) {
+      // 如果點擊相同欄位，切換排序方向
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 如果點擊不同欄位，設定新欄位並預設為降序
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  // 產生排序圖標
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-4 w-4" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="ml-1 h-4 w-4" /> : 
+      <ArrowDown className="ml-1 h-4 w-4" />;
+  };
+
+  // 處理和排序產品數據
+  const processedAndSortedProducts = React.useMemo(() => {
+    const { startDate, endDate } = getDateRange();
+    
+    // 處理數據並計算總和和成長率
+    const processedProducts = groupedProductsData
+      .filter(product => {
+        if (searchQuery) {
+          return product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+        }
+        return true;
+      })
+      .map(product => {
+        // 計算所選時間範圍內商品所有規格的數據總和
+        const salesData = getProductDateRangeData(product, startDate, endDate);
+        const totalQuantity = salesData.reduce((sum, item) => sum + item.quantity, 0);
+        const totalAmount = salesData.reduce((sum, item) => sum + item.amount, 0);
+
+        // 使用工具函數計算成長率
+        const { quantityGrowth, amountGrowth } = calculateProductGrowthRates(
+          product, 
+          timeRange, 
+          customDateRange
+        );
+
+        return {
+          ...product,
+          totalQuantity,
+          totalAmount,
+          quantityGrowth,
+          amountGrowth
+        } as SortableProduct;
+      });
+    
+    // 根據選定欄位和方向排序
+    return [...processedProducts].sort((a, b) => {
+      let comparison = 0;
+      
+      switch(sortField) {
+        case 'quantity':
+          comparison = a.totalQuantity - b.totalQuantity;
+          break;
+        case 'amount':
+          comparison = a.totalAmount - b.totalAmount;
+          break;
+        case 'quantityGrowth':
+          // 處理 undefined 情況
+          const growthA = a.quantityGrowth ?? -Infinity;
+          const growthB = b.quantityGrowth ?? -Infinity;
+          comparison = growthA - growthB;
+          break;
+        case 'amountGrowth':
+          const amountGrowthA = a.amountGrowth ?? -Infinity;
+          const amountGrowthB = b.amountGrowth ?? -Infinity;
+          comparison = amountGrowthA - amountGrowthB;
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [groupedProductsData, getDateRange, searchQuery, sortField, sortDirection, timeRange, customDateRange]);
+
   return (
     <div className="flex flex-col gap-4">
+      {/* 搜尋與篩選器 */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center flex-1">
           <Search className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -192,22 +369,6 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
             )}
           </div>
           
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger 
-              className="w-[150px]"
-              size="sm"
-              aria-label="Select category"
-            >
-              <SelectValue placeholder="所有類別" />
-            </SelectTrigger>
-            <SelectContent>
-              {productCategories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {selectedProducts.length > 0 && (
             <Button
               variant="secondary"
@@ -218,13 +379,12 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
               取消選取 ({selectedProducts.length})
             </Button>
           )}
-          {(searchQuery || categoryFilter !== "所有類別") && (
+          {searchQuery && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setSearchQuery("");
-                setCategoryFilter("所有類別");
               }}
               className="h-10"
             >
@@ -236,67 +396,74 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
 
       {/* 商品數據表格 */}
       <div className="rounded-lg border">
-        <Table><TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      id="product-table-all"
-                      checked={selectedProducts.length === groupedProductsData.length}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedProducts(groupedProductsData.map(product => product.id));
-                        } else {
-                          setSelectedProducts([]);
-                        }
-                      }}
-                    />
-                  </TableHead>
-                  <TableHead>廠商代碼</TableHead>
-                  <TableHead>產品分類</TableHead>
-                  <TableHead>產品名稱</TableHead>
-                  <TableHead>規格</TableHead>
-                  <TableHead className="text-right">期間銷售量 (成長率)</TableHead>
-                  <TableHead className="text-right">期間銷售額 (成長率)</TableHead>
-                </TableRow>
-              </TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  id="product-table-all"
+                  checked={selectedProducts.length === groupedProductsData.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedProducts(groupedProductsData.map(product => product.id.toString()));
+                    } else {
+                      setSelectedProducts([]);
+                    }
+                  }}
+                />
+              </TableHead>
+              <TableHead>廠商名稱</TableHead>
+              <TableHead>商品名稱</TableHead>
+              <TableHead>規格</TableHead>
+              <TableHead 
+                className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSortChange('quantity')}
+              >
+                <div className="flex items-center justify-end">
+                  期間銷售量
+                  {getSortIcon('quantity')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSortChange('quantityGrowth')}
+              >
+                <div className="flex items-center justify-end">
+                  成長率
+                  {getSortIcon('quantityGrowth')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSortChange('amount')}
+              >
+                <div className="flex items-center justify-end">
+                  期間銷售額
+                  {getSortIcon('amount')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSortChange('amountGrowth')}
+              >
+                <div className="flex items-center justify-end">
+                  成長率
+                  {getSortIcon('amountGrowth')}
+                </div>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {groupedProductsData.length === 0 ? (
+            {processedAndSortedProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   無符合條件的商品
                 </TableCell>
               </TableRow>
             ) : (
-              groupedProductsData.filter(product => {
-                if (categoryFilter !== "所有類別" && product.productCategory !== categoryFilter) {
-                  return false;
-                }
-                
-                if (searchQuery) {
-                  return product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    product.productCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    product.vendorCode.toLowerCase().includes(searchQuery.toLowerCase());
-                }
-                
-                return true;
-              }).map((product) => {
+              processedAndSortedProducts.map((product) => {
                 const isSelected = selectedProducts.includes(product.id);
-                const { startDate, endDate } = getDateRange();
-                
-                // 計算所選時間範圍內產品所有規格的數據總和
-                const salesData = getProductDateRangeData(product, startDate, endDate);
-                
-                const totalQuantity = salesData.reduce((sum, item) => sum + item.quantity, 0);
-                const totalAmount = salesData.reduce((sum, item) => sum + item.amount, 0);
-
-                // 使用工具函數計算成長率
-                const { quantityGrowth, amountGrowth } = calculateProductGrowthRates(
-                  product, 
-                  timeRange, 
-                  customDateRange
-                );
-                
-                const modelsCount = product.models.length;
+                const modelsCount = product.models?.length || 0;
                 
                 return (
                   <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
@@ -306,24 +473,23 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                         checked={isSelected}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedProducts([...selectedProducts, product.id])
+                            setSelectedProducts([...selectedProducts, product.id.toString()])
                           } else {
                             setSelectedProducts(selectedProducts.filter(id => id !== product.id))
                           }
                         }}
                       />
                     </TableCell>
-                    <TableCell>{product.vendorCode}</TableCell>
-                    <TableCell>{product.productCategory}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
                     <TableCell className="flex items-center gap-2">
-                      {product.productName}
+                      {product.product_name}
                       {modelsCount > 1 && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-xs"
                           onClick={() => {
-                            setSelectedProductForDetail(product.id);
+                            setSelectedProductForDetail(product.id.toString());
                             setDetailDialogOpen(true);
                           }}
                         >
@@ -335,27 +501,31 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                     <TableCell>{modelsCount} 種規格</TableCell>
                     <TableCell className="text-right font-mono">
                       <div className="flex items-center justify-end">
-                        <span>{totalQuantity}</span>
-                        {quantityGrowth !== undefined && (
-                          <span 
-                            className={`ml-2 text-xs ${quantityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                          >
-                            {quantityGrowth >= 0 ? '↑' : '↓'} {Math.abs(quantityGrowth)}%
-                          </span>
-                        )}
+                        <span>{product.totalQuantity}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono">
+                      {product.quantityGrowth !== undefined && (
+                        <span 
+                          className={`ml-2 text-xs ${product.quantityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                        >
+                          {product.quantityGrowth >= 0 ? '↑' : '↓'} {Math.abs(product.quantityGrowth)}%
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
                       <div className="flex items-center justify-end">
-                        <span>$ {totalAmount.toLocaleString()}</span>
-                        {amountGrowth !== undefined && (
-                          <span 
-                            className={`ml-2 text-xs ${amountGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
-                          >
-                            {amountGrowth >= 0 ? '↑' : '↓'} {Math.abs(amountGrowth)}%
-                          </span>
-                        )}
+                        <span>$ {product.totalAmount.toLocaleString()}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {product.amountGrowth !== undefined && (
+                        <span 
+                          className={`ml-2 text-xs ${product.amountGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                        >
+                          {product.amountGrowth >= 0 ? '↑' : '↓'} {Math.abs(product.amountGrowth)}%
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 )
@@ -363,7 +533,10 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
             )}
           </TableBody>
         </Table>
-      </div>        {selectedProducts.length > 0 && (
+      </div>
+      
+      {/* 已選取商品的圖表 */}
+      {selectedProducts.length > 0 && (
         <div className="mt-6">
           <Card className="border shadow-sm @container/card">
             <CardHeader>
@@ -410,6 +583,23 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                       })
                     }}
                   />
+                  <YAxis
+                    label={{ 
+                      value: chartType === "amount" ? "銷售額" : "銷售量", 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { textAnchor: 'middle' }
+                    }}
+                    tickFormatter={(value) => {
+                      if (chartType === "amount") {
+                        if (value >= 10000) {
+                          return `$${(value / 1000).toFixed(0)}k`
+                        }
+                        return `$${value}`
+                      }
+                      return value.toString()
+                    }}
+                  />
                   <ChartTooltip
                     cursor={false}
                     content={
@@ -439,7 +629,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                         type="monotone"
                         dataKey={chartType}
                         stroke={color}
-                        name={product.productName}
+                        name={product.product_name}
                         strokeWidth={2}
                       />
                     );
@@ -456,9 +646,9 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
         <ProductDetailDialog
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
-          productName={groupedProductsData.find(p => p.id === selectedProductForDetail)?.productName || ""}
-          productCategory={groupedProductsData.find(p => p.id === selectedProductForDetail)?.productCategory || ""}
-          vendorCode={groupedProductsData.find(p => p.id === selectedProductForDetail)?.vendorCode || ""}
+          product_name={groupedProductsData.find(p => p.id === selectedProductForDetail)?.product_name || ""}
+          category_name={""}
+          sku={groupedProductsData.find(p => p.id === selectedProductForDetail)?.sku || ""}
           models={groupedProductsData.find(p => p.id === selectedProductForDetail)?.models || []}
         />
       )}
@@ -472,8 +662,9 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
             <p>
               時間範圍：可選擇預設時間區間（7天、30天、90天、180天），或設定自訂日期範圍<br />
               數據選擇：可選擇顯示銷售額或銷售量<br />
+              排序功能：點擊表格標題可按期間銷售量、期間銷售額或各自的成長率進行排序<br />
               商品比較：勾選多個商品可同時比較其銷售表現<br />
-              規格詳情：點擊「查看 X 種規格」可比較同一產品的不同規格
+              規格詳情：點擊「查看 X 種規格」可比較同一商品的不同規格
             </p>
           </CardContent>
         </Card>

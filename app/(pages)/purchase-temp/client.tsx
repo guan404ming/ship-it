@@ -109,10 +109,6 @@ export default function PurchaseTempClient() {
                     <PlusCircle className="mr-2 h-4 w-4" />
                     新增叫貨
                   </Button>
-                  <Button variant="outline" size="sm" className="h-10 px-4">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    資料匯出
-                  </Button>
                 </div>
                 
                 <PurchaseImportDialog 

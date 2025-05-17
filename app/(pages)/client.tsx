@@ -176,10 +176,6 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     <FileUp className="mr-2 h-4 w-4" />
                     庫存匯入
                   </Button>
-                  <Button variant="outline" size="sm" className="h-10 px-4">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    資料匯出
-                  </Button>
                 </div>
               </div>
 

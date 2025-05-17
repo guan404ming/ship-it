@@ -50,7 +50,7 @@ const ModelRow = ({ model, onNameChange, onQuantityChange, onRemove }: ModelRowP
   <div className="grid grid-cols-12 gap-4 p-2 items-center">
     <div className="col-span-6">
       <Input 
-        placeholder="輸入型號名稱" 
+        placeholder="輸入規格名稱" 
         value={model.name}
         onChange={(e) => onNameChange(e.target.value)}
         className="h-10 w-full"
@@ -116,7 +116,7 @@ const ProductCard = ({
               {item.models.length > 0 && (
                 <div className="mt-1">
                   <p className="text-xs text-blue-600">
-                    {item.models.length} 種型號，共 {item.models.reduce((sum, model) => sum + model.quantity, 0)} 件
+                    {item.models.length} 種規格，共 {item.models.reduce((sum, model) => sum + model.quantity, 0)} 件
                   </p>
                 </div>
               )}
@@ -138,12 +138,12 @@ const ProductCard = ({
 
         <div>
           <label className="text-sm font-medium mb-2 block">
-            商品型號
+            商品規格
           </label>
           
           <div className="border rounded-md overflow-hidden mb-2">
             <div className="grid grid-cols-12 gap-4 bg-muted p-2 text-sm font-medium">
-              <div className="col-span-6">型號名稱</div>
+              <div className="col-span-6">規格名稱</div>
               <div className="col-span-4">數量</div>
               <div className="col-span-2 text-right">操作</div>
             </div>
@@ -162,7 +162,7 @@ const ProductCard = ({
               </div>
             ) : (
               <div className="p-4 text-center text-muted-foreground text-sm">
-                尚未添加型號，請點擊下方按鈕添加
+                尚未添加規格，請點擊下方按鈕添加
               </div>
             )}
           </div>
@@ -175,7 +175,7 @@ const ProductCard = ({
             className="w-full"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
-            新增型號
+            新增規格
           </Button>
         </div>
       </div>
@@ -225,7 +225,7 @@ export function PurchaseImportDialog({
         isVisible: true, 
         product_name: "", 
         quantity: 0, 
-        models: [{ id: 1, name: "", quantity: 1 }], // 預設一個型號
+        models: [{ id: 1, name: "", quantity: 1 }], // 預設一個規格
       },
     ]);
     setTotalItems(totalItems + 1);
@@ -335,12 +335,12 @@ export function PurchaseImportDialog({
     }
     
     if (orderItems.some(item => item.models.length === 0)) {
-      alert("每個商品至少需要添加一個型號");
+      alert("每個商品至少需要添加一個規格");
       return;
     }
     
     if (orderItems.some(item => item.models.some(model => !model.name.trim()))) {
-      alert("請確保所有型號都有名稱");
+      alert("請確保所有規格都有名稱");
       return;
     }
 
@@ -356,7 +356,7 @@ export function PurchaseImportDialog({
     });
     
     if (hasDuplicateModels) {
-      alert("同一個商品不能有重複的型號名稱，請修改後再提交");
+      alert("同一個商品不能有重複的規格名稱，請修改後再提交");
       return;
     }
 

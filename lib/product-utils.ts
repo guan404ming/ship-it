@@ -8,7 +8,7 @@ import { SalesData, ProductSalesModel, GroupedProductSales } from "@/lib/types";
  * 計算商品在指定時間範圍內的銷售數據
  */
 export function getProductDateRangeData(product: GroupedProductSales, startDate: Date, endDate: Date): SalesData[] {
-  // 收集所有型號的數據並按日期合併
+  // 收集所有規格的數據並按日期合併
   const dateMap = new Map<string, { date: string, amount: number, quantity: number }>();
 
   product.models?.forEach(model => {
@@ -83,7 +83,7 @@ export function calculateProductGrowthRates(
 }
 
 /**
- * 計算商品型號的成長率
+ * 計算商品規格的成長率
  */
 export function calculateProductModelGrowthRates(
   model: ProductSalesModel,

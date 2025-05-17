@@ -282,7 +282,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                           <Checkbox />
                         </TableHead>
                         <TableHead>商品名稱</TableHead>
-                        <TableHead>型號</TableHead>
+                        <TableHead>規格</TableHead>
                         <TableHead
                           className="cursor-pointer text-right"
                           onClick={() => requestSort("stock_quantity")}

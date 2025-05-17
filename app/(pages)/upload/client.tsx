@@ -45,7 +45,7 @@ function UploadContent() {
   const [priceError, setPriceError] = React.useState<string | null>(null);
   const [modelNameError, setModelNameError] = React.useState<string | null>(null);
 
-  // 新增的商品型號列表
+  // 新增的商品規格列表
   const [models, setModels] = React.useState<
     Array<{ id: string; modelName: string; quantity: string; error: string | null }>
   >([]);
@@ -116,18 +116,18 @@ function UploadContent() {
     }
   };
 
-  // 新增型號
+  // 新增規格
   const addModel = () => {
     if (!modelName.trim()) return;
     
-    // 檢查是否有重複的型號名稱
+    // 檢查是否有重複的規格名稱
     const trimmedModelName = modelName.trim();
     const isDuplicate = models.some(model => 
       model.modelName.toLowerCase() === trimmedModelName.toLowerCase()
     );
     
     if (isDuplicate) {
-      setModelNameError("此型號名稱已存在");
+      setModelNameError("此規格名稱已存在");
       return;
     }
     
@@ -140,7 +140,7 @@ function UploadContent() {
     setModelNameError(null);
   };
 
-  // 刪除型號
+  // 刪除規格
   const removeModel = (id: string) => {
     setModels(models.filter(model => model.id !== id));
   };
@@ -279,23 +279,23 @@ function UploadContent() {
                           />
                         </div>
                         <div className="grid gap-1.5">
-                          <Label htmlFor="item-name">商品型號</Label>
+                          <Label htmlFor="item-name">商品規格</Label>
                           <div className="flex gap-2">
                             <div className="flex-1">
                               <Input
-                                      placeholder="請輸入型號名稱"
+                                      placeholder="請輸入規格名稱"
                                       value={modelName}
                                       onChange={(e) => {
                                         const value = e.target.value;
                                         setModelName(value);
                                         
-                                        // 當使用者輸入時，檢查是否有重複的型號名稱
+                                        // 當使用者輸入時，檢查是否有重複的規格名稱
                                         const trimmedValue = value.trim();
                                         if (trimmedValue) {
                                           const isDuplicate = models.some(model => 
                                             model.modelName.toLowerCase() === trimmedValue.toLowerCase()
                                           );
-                                          setModelNameError(isDuplicate ? "此型號名稱已存在" : null);
+                                          setModelNameError(isDuplicate ? "此規格名稱已存在" : null);
                                         } else {
                                           setModelNameError(null);
                                         }
@@ -314,7 +314,7 @@ function UploadContent() {
                               onClick={addModel}
                               disabled={!modelName.trim() || modelNameError !== null}
                             >
-                              新增型號
+                              新增規格
                             </Button>
                           </div>
                           {modelNameError && (
@@ -322,13 +322,13 @@ function UploadContent() {
                           )}
                         </div>
                         
-                        {/* 型號輸入區 */}
+                        {/* 規格輸入區 */}
                         <div className="rounded-lg border p-4">
                           
                           {models.length > 0 && (
                             <div className="space-y-3 mt-2">
                               <div className="grid grid-cols-5 gap-2 text-sm text-muted-foreground font-medium">
-                                <div className="col-span-3">型號名稱</div>
+                                <div className="col-span-3">規格名稱</div>
                                 <div className="col-span-1">數量</div>
                                 <div className="col-span-1"></div>
                               </div>
@@ -371,7 +371,7 @@ function UploadContent() {
                           
                           {models.length === 0 && (
                             <p className="text-sm text-muted-foreground text-center py-3">
-                              尚未新增任何型號
+                              尚未新增任何規格
                             </p>
                           )}
                         </div>

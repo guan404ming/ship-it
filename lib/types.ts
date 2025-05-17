@@ -29,6 +29,9 @@ export type ProductModelWithProduct = ProductModel & {
 
 export type StockRecordWithModel = StockRecord & {
   product_models: ProductModelWithProduct;
+  supplier_name?: string;
+  remaining_days?: number;
+  is_ordered?: boolean;
 };
 
 export type OrderWithBuyer = Order & {

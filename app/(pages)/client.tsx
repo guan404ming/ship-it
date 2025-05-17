@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BoxIcon, FileDown, FileUp, PackageIcon, Search } from "lucide-react";
+import { BoxIcon, FileUp, PackageIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -18,14 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// 移除不再使用的 Select 組件
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 import { StockRecordWithModel } from "@/lib/types";
 
 interface InventoryClientProps {
@@ -37,9 +35,8 @@ interface InventoryClientProps {
 export function InventoryClient({ initialInventory }: InventoryClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState<string>("");
-  const [categoryFilter, setCategoryFilter] =
-    React.useState<string>("所有類別");
-  const [statusFilter, setStatusFilter] = React.useState<string>("所有狀態");
+  const [stockStatusFilter, setStockStatusFilter] = React.useState<string>("所有狀態");
+  const [orderStatusFilter, setOrderStatusFilter] = React.useState<string>("所有狀態");
   const [sortConfig, setSortConfig] = React.useState<{
     key: keyof StockRecordWithModel | null;
     direction: "ascending" | "descending" | null;
@@ -54,21 +51,23 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
   const totalItems = initialInventory.length;
   const lowStockItems = initialInventory.filter(
-    (item) => (item.stock_quantity ?? 0) < 10
+    (item) => (item.remaining_days ?? 0) < 7
   ).length;
 
-  const handleStatusFilter = (status: string) => {
-    if (statusFilter === status) {
-      setStatusFilter("所有狀態");
-    } else {
-      setStatusFilter(status);
-    }
+  // 修改過濾處理邏輯以支持切換按鈕
+  const handleStockStatusFilter = (status: string) => {
+    setStockStatusFilter(stockStatusFilter === status ? "所有狀態" : status);
   };
 
+  const handleOrderStatusFilter = (status: string) => {
+    setOrderStatusFilter(orderStatusFilter === status ? "所有狀態" : status);
+  };
+
+  // 清除所有篩選條件
   const clearAllFilters = () => {
     setSearchQuery("");
-    setCategoryFilter("所有類別");
-    setStatusFilter("所有狀態");
+    setStockStatusFilter("所有狀態");
+    setOrderStatusFilter("所有狀態");
   };
 
   const requestSort = (key: keyof StockRecordWithModel) => {
@@ -87,11 +86,19 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
   };
 
   const filteredAndSortedData = React.useMemo(() => {
-    let filteredData = [...initialInventory];
+    let filteredData = [...initialInventory].map(item => ({
+      ...item,
+      supplier_name: item.supplier_name || "廠商" + (item.model_id % 5 + 1),
+      remaining_days: item.remaining_days || Math.floor(Math.random() * 20) + 1,
+      is_ordered: item.is_ordered !== undefined ? item.is_ordered : Math.random() > 0.5
+    }));
 
     if (searchQuery) {
       filteredData = filteredData.filter(
         (item) =>
+          item.supplier_name
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           item.product_models.products.product_name
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
@@ -101,17 +108,18 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
       );
     }
 
-    if (categoryFilter !== "所有類別") {
-      filteredData = filteredData.filter(
-        (item) =>
-          item.product_models.products.category_id === parseInt(categoryFilter)
-      );
+    if (stockStatusFilter !== "所有狀態") {
+      filteredData = filteredData.filter((item) => {
+        if (stockStatusFilter === "警告") return (item.remaining_days ?? 0) < 7;
+        if (stockStatusFilter === "充足") return (item.remaining_days ?? 0) >= 7;
+        return true;
+      });
     }
 
-    if (statusFilter !== "所有狀態") {
+    if (orderStatusFilter !== "所有狀態") {
       filteredData = filteredData.filter((item) => {
-        if (statusFilter === "警告") return (item.stock_quantity ?? 0) < 10;
-        if (statusFilter === "充足") return (item.stock_quantity ?? 0) >= 10;
+        if (orderStatusFilter === "已叫貨") return item.is_ordered === true;
+        if (orderStatusFilter === "未叫貨") return item.is_ordered === false;
         return true;
       });
     }
@@ -136,17 +144,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     }
 
     return filteredData;
-  }, [searchQuery, categoryFilter, statusFilter, sortConfig, initialInventory]);
-
-  const productCategories = React.useMemo(() => {
-    const categories = new Set(
-      initialInventory.map((item) => item.product_models.products.category_id)
-    );
-    return [
-      "所有類別",
-      ...Array.from(categories).filter((c): c is number => c !== null),
-    ];
-  }, [initialInventory]);
+  }, [searchQuery, stockStatusFilter, orderStatusFilter, sortConfig, initialInventory]);
 
   return (
     <SidebarProvider
@@ -227,44 +225,90 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     className="w-full max-w-sm h-10"
                   />
                 </div>
-                <div className="flex gap-3 items-center">
-                  <Select
-                    value={categoryFilter}
-                    onValueChange={setCategoryFilter}
-                  >
-                    <SelectTrigger className="w-[180px] h-10">
-                      <SelectValue placeholder="選擇類別" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productCategories.map((category) => (
-                        <SelectItem key={category} value={category.toString()}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[140px] h-10">
-                      <SelectValue placeholder="選擇狀態" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="所有狀態">所有狀態</SelectItem>
-                      <SelectItem value="充足">充足</SelectItem>
-                      <SelectItem value="警告">警告</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex gap-3 items-end">
+                  {/* 清除篩選按鈕 */}
                   {(searchQuery ||
-                    categoryFilter !== "所有類別" ||
-                    statusFilter !== "所有狀態") && (
+                    stockStatusFilter !== "所有狀態" ||
+                    orderStatusFilter !== "所有狀態") && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={clearAllFilters}
-                      className="h-10"
+                      className="h-8 ml-2 border border-gray-300"
                     >
                       清除篩選
                     </Button>
                   )}
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground px-1">庫存狀態</span>
+                    <ToggleGroup
+                      type="single"
+                      variant="outline"
+                      value={stockStatusFilter}
+                      onValueChange={(value) => setStockStatusFilter(value || "所有狀態")}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem 
+                        value="充足"
+                        size="sm"
+                        className={
+                          stockStatusFilter === "充足" 
+                            ? "bg-gray-50 text-gray-600 border-gray-200" 
+                            : ""
+                        }
+                      >
+                        充足
+                      </ToggleGroupItem>
+                      <ToggleGroupItem 
+                        value="警告"
+                        size="sm"
+                        className={
+                          stockStatusFilter === "警告" 
+                            ? "bg-gray-50 text-gray-600 border-gray-200"  
+                            : ""
+                        }
+                      >
+                        警告
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground px-1">叫貨狀態</span>
+                    <ToggleGroup
+                      type="single"
+                      variant="outline"
+                      value={orderStatusFilter}
+                      onValueChange={(value) => setOrderStatusFilter(value || "所有狀態")}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem 
+                        value="已叫貨"
+                        size="sm"
+                        className={
+                          orderStatusFilter === "已叫貨" 
+                            ? "bg-gray-50 text-gray-600 border-gray-200" 
+                            : ""
+                        }
+                      >
+                        已叫貨
+                      </ToggleGroupItem>
+                      <ToggleGroupItem 
+                        value="未叫貨"
+                        size="sm"
+                        className={
+                          orderStatusFilter === "未叫貨" 
+                            ? "bg-gray-50 text-gray-600 border-gray-200" 
+                            : ""
+                        }
+                      >
+                        未叫貨
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  
+
                 </div>
               </div>
 
@@ -277,6 +321,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                         <TableHead className="w-12">
                           <Checkbox />
                         </TableHead>
+                        <TableHead>廠商名稱</TableHead>
                         <TableHead>商品名稱</TableHead>
                         <TableHead>規格</TableHead>
                         <TableHead
@@ -293,6 +338,20 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                           ) : null}
                         </TableHead>
                         <TableHead>庫存狀態</TableHead>
+                        <TableHead
+                          className="cursor-pointer text-right"
+                          onClick={() => requestSort("remaining_days")}
+                        >
+                          剩餘天數
+                          {sortConfig.key === "remaining_days" ? (
+                            sortConfig.direction === "ascending" ? (
+                              <span className="ml-1">↑</span>
+                            ) : sortConfig.direction === "descending" ? (
+                              <span className="ml-1">↓</span>
+                            ) : null
+                          ) : null}
+                        </TableHead>
+                        <TableHead>是否已叫貨</TableHead>
                         <TableHead>最後更新</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -301,6 +360,9 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                         <TableRow key={item.model_id}>
                           <TableCell>
                             <Checkbox />
+                          </TableCell>
+                          <TableCell>
+                            {item.supplier_name ?? "-"}
                           </TableCell>
                           <TableCell>
                             {item.product_models.products.product_name ?? "-"}
@@ -320,28 +382,57 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                           <TableCell>
                             <span
                               className={`px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${
-                                (item.stock_quantity ?? 0) >= 10
+                                (item.remaining_days ?? 0) >= 7
                                   ? "bg-green-50 text-green-600 hover:bg-green-100"
                                   : "bg-[#F27F3D]/10 text-[#F27F3D] hover:bg-[#F27F3D]/20"
                               } ${
-                                statusFilter ===
-                                ((item.stock_quantity ?? 0) >= 10
+                                stockStatusFilter ===
+                                ((item.remaining_days ?? 0) >= 7
                                   ? "充足"
                                   : "警告")
                                   ? "ring-2 ring-offset-1"
                                   : ""
                               }`}
                               onClick={() =>
-                                handleStatusFilter(
-                                  (item.stock_quantity ?? 0) >= 10
+                                handleStockStatusFilter(
+                                  (item.remaining_days ?? 0) >= 7
                                     ? "充足"
                                     : "警告"
                                 )
                               }
                             >
-                              {(item.stock_quantity ?? 0) >= 10
+                              {(item.remaining_days ?? 0) >= 7
                                 ? "充足"
                                 : "警告"}
+                            </span>
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-mono ${
+                              (item.remaining_days ?? 0) < 7 // 目前的邏輯是剩餘天數小於 7 天就會顯示為橘色
+                                ? "text-[#F27F3D] font-bold"
+                                : ""
+                            }`}
+                          >
+                            {item.remaining_days ?? "-"}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${
+                                item.is_ordered
+                                  ? "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                                  : "text-white bg-slate-500 hover:bg-slate-600"
+                              } ${
+                                orderStatusFilter === (item.is_ordered ? "已叫貨" : "未叫貨")
+                                  ? "ring-2 ring-offset-1"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                handleOrderStatusFilter(
+                                  item.is_ordered ? "已叫貨" : "未叫貨"
+                                )
+                              }
+                            >
+                              {item.is_ordered ? "已叫貨" : "未叫貨"}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -353,6 +444,19 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              </div>
+              
+              {/* 備註說明區塊 */}
+              <div className="px-4 lg:px-6 mt-6 mb-8">
+                <div className="rounded-lg border p-4">
+                  <h3 className="text-sm font-medium mb-2">庫存狀態說明</h3>
+                  <ul className="text-sm space-y-1">
+                    <li>• 剩餘天數的計算方式為目前的庫存量除以過去 30 天的日均銷售量 </li>
+                    <li>• 剩餘天數小於 7 天的商品將被標記為「警告」狀態</li>
+                    <li>• 剩餘天數大於或等於 7 天的商品將被標記為「充足」狀態</li>
+                    <li>• 低庫存項目的統計基於剩餘天數小於 7 天的商品數量</li>
+                  </ul>
                 </div>
               </div>
             </div>

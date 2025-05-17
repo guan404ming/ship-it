@@ -25,9 +25,7 @@ interface PurchaseEditDialogProps {
 // Interface for our form data
 interface PurchaseFormData {
   id: string;
-  batch_id: string;
   supplier_name: string;
-  category_name: string;
   product_name: string;
   model_name: string;
   quantity: number;
@@ -36,6 +34,9 @@ interface PurchaseFormData {
   expected_arrival: string;
   note?: string;
   models: ModelItem[];
+  // Keep these fields in the data structure but don't display them
+  batch_id?: string;
+  category_name?: string;
 }
 
 export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
@@ -129,7 +130,7 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
           編輯
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>編輯叫貨項目</DialogTitle>
           <DialogDescription>
@@ -141,31 +142,11 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
           <form onSubmit={handleSubmit} className="space-y-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">進貨單號</label>
-                <Input 
-                  value={formData.batch_id} 
-                  disabled 
-                  className="bg-muted/50"
-                />
-              </div>
-              
-              <div className="space-y-2">
                 <label className="text-sm font-medium">廠商名稱</label>
                 <Input 
                   value={formData.supplier_name} 
                   onChange={(e) => handleChange('supplier_name', e.target.value)}
                   placeholder="輸入廠商名稱"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">商品分類</label>
-                <Input 
-                  value={formData.category_name} 
-                  onChange={(e) => handleChange('category_name', e.target.value)}
-                  placeholder="輸入商品分類"
                 />
               </div>
               
@@ -179,7 +160,7 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
               </div>
             </div>
             
-            <Card className="p-4">
+
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">商品規格</label>
@@ -207,7 +188,7 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
                   </div>
                 </div>
               </div>
-            </Card>
+
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">

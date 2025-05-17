@@ -128,7 +128,7 @@ export default function PurchaseTempClient() {
                       <FileUp className="h-6 w-6 text-[#08678C]" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm text-muted-foreground">總進貨單</p>
+                      <p className="text-sm text-muted-foreground">總叫貨單</p>
                       <h2 className="text-3xl font-bold text-[#08678C]">
                         {totalOrders}
                       </h2>

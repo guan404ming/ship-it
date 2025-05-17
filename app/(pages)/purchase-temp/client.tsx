@@ -38,6 +38,7 @@ export default function PurchaseTempClient() {
   const [categoryFilter, setCategoryFilter] =
     React.useState<string>("所有規則");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedRows, setSelectedRows] = React.useState<Record<string, boolean>>({});
 
   const handlePurchaseOrderImport = () => {
     setIsDialogOpen(true);
@@ -80,6 +81,43 @@ export default function PurchaseTempClient() {
     );
     return ["所有規則", ...Array.from(categories)];
   }, []);
+
+  // Toggle a single row selection
+  const toggleRowSelection = (id: string) => {
+    setSelectedRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Toggle all rows selection
+  const toggleAllRows = () => {
+    if (Object.keys(selectedRows).length === filteredData.length && 
+        Object.values(selectedRows).every(selected => selected)) {
+      // If all are selected, clear selection
+      setSelectedRows({});
+    } else {
+      // Otherwise, select all filtered rows
+      const newSelectedRows: Record<string, boolean> = {};
+      filteredData.forEach(item => {
+        newSelectedRows[item.id] = true;
+      });
+      setSelectedRows(newSelectedRows);
+    }
+  };
+
+  // Check if all filtered rows are selected
+  const areAllRowsSelected = 
+    filteredData.length > 0 && 
+    filteredData.every(item => selectedRows[item.id]);
+  
+  // Check if some (but not all) rows are selected
+  const areSomeRowsSelected = 
+    Object.keys(selectedRows).length > 0 && 
+    !areAllRowsSelected;
+  
+  // Count of selected rows
+  const selectedRowsCount = Object.values(selectedRows).filter(Boolean).length;
 
   return (
     <SidebarProvider
@@ -191,7 +229,11 @@ export default function PurchaseTempClient() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">
-                          <Checkbox />
+                          <Checkbox 
+                            checked={areAllRowsSelected}
+                            onCheckedChange={toggleAllRows}
+                            aria-label="Select all"
+                          />
                         </TableHead>
                         <TableHead>進貨單號</TableHead>
                         <TableHead>廠商名稱</TableHead>
@@ -209,7 +251,10 @@ export default function PurchaseTempClient() {
                       {filteredData.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>
-                            <Checkbox />
+                            <Checkbox
+                              checked={selectedRows[item.id] || false}
+                              onCheckedChange={() => toggleRowSelection(item.id)}
+                            />
                           </TableCell>
                           <TableCell>{item.batch_id}</TableCell>
                           <TableCell>{item.supplier_name}</TableCell>

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
+import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { purchaseOrderData } from "@/lib/data/purchase-data";
 
 export default function PurchaseTempClient() {
@@ -111,13 +112,6 @@ export default function PurchaseTempClient() {
     filteredData.length > 0 && 
     filteredData.every(item => selectedRows[item.id]);
   
-  // Check if some (but not all) rows are selected
-  const areSomeRowsSelected = 
-    Object.keys(selectedRows).length > 0 && 
-    !areAllRowsSelected;
-  
-  // Count of selected rows
-  const selectedRowsCount = Object.values(selectedRows).filter(Boolean).length;
 
   return (
     <SidebarProvider
@@ -245,6 +239,7 @@ export default function PurchaseTempClient() {
                         <TableHead>叫貨日期</TableHead>
                         <TableHead>預計到貨日</TableHead>
                         <TableHead>備註</TableHead>
+                        <TableHead>動作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -270,6 +265,9 @@ export default function PurchaseTempClient() {
                           <TableCell>{item.created_at}</TableCell>
                           <TableCell>{item.expected_arrival}</TableCell>
                           <TableCell>{item.note || "-"}</TableCell>
+                          <TableCell>
+                            <PurchaseEditDialog purchaseId={item.id} />
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

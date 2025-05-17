@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BoxIcon, FileUp, PackageIcon, Search } from "lucide-react";
+import { BoxIcon, FileUp, PackageIcon, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -18,13 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-// 移除不再使用的 Select 組件
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group";
 import { StockRecordWithModel } from "@/lib/types";
+import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 
 interface InventoryClientProps {
   initialInventory: StockRecordWithModel[];
@@ -44,6 +44,8 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     key: null,
     direction: null,
   });
+  const [selectedItems, setSelectedItems] = React.useState<Set<number>>(new Set());
+  const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
 
   const handleInventoryImport = () => {
     router.push("/upload?type=inventory");
@@ -146,6 +148,46 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     return filteredData;
   }, [searchQuery, stockStatusFilter, orderStatusFilter, sortConfig, initialInventory]);
 
+  // Handle item selection
+  const toggleItemSelection = (modelId: number) => {
+    setSelectedItems(prevSelected => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(modelId)) {
+        newSelected.delete(modelId);
+      } else {
+        newSelected.add(modelId);
+      }
+      return newSelected;
+    });
+  };
+
+  // Select/deselect all items
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredAndSortedData.length) {
+      // If all items are selected, deselect all
+      setSelectedItems(new Set());
+    } else {
+      // Otherwise select all filtered items
+      const allModelIds = filteredAndSortedData.map(item => item.model_id);
+      setSelectedItems(new Set(allModelIds));
+    }
+  };
+
+  // Get selected items data
+  const getSelectedItemsData = () => {
+    return filteredAndSortedData.filter(item => selectedItems.has(item.model_id));
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    // Placeholder for future implementation
+    console.log("以下項目將被刪除:", getSelectedItemsData());
+    alert(`已選擇 ${selectedItems.size} 個項目準備刪除`);
+    // Here you would implement the actual delete logic
+    // and then clear the selection
+    setSelectedItems(new Set());
+  };
+
   return (
     <SidebarProvider
       style={
@@ -224,6 +266,29 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full max-w-sm h-10"
                   />
+                  
+                  {/* 當有選擇項目時顯示的操作按鈕 */}
+                  {selectedItems.size > 0 && (
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => setIsDialogOpen(true)}
+                        className="bg-[#08678C]"
+                      >
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        一鍵叫貨 ({selectedItems.size})
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        刪除
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 items-end">
                   {/* 清除篩選按鈕 */}
@@ -319,7 +384,14 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">
-                          <Checkbox />
+                          <Checkbox 
+                            checked={
+                              filteredAndSortedData.length > 0 && 
+                              selectedItems.size === filteredAndSortedData.length
+                            }
+                            onCheckedChange={toggleSelectAll}
+                            aria-label="全選"
+                          />
                         </TableHead>
                         <TableHead>廠商名稱</TableHead>
                         <TableHead>商品名稱</TableHead>
@@ -359,7 +431,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                       {filteredAndSortedData.map((item) => (
                         <TableRow key={item.model_id}>
                           <TableCell>
-                            <Checkbox />
+                            <Checkbox 
+                              checked={selectedItems.has(item.model_id)}
+                              onCheckedChange={() => toggleItemSelection(item.model_id)}
+                            />
                           </TableCell>
                           <TableCell>
                             {item.supplier_name ?? "-"}
@@ -463,6 +538,13 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
           </div>
         </div>
       </SidebarInset>
+      
+      {/* 一鍵叫貨對話框 */}
+      <PurchaseImportDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        selectedItems={isDialogOpen ? getSelectedItemsData() : []}
+      />
     </SidebarProvider>
   );
 }

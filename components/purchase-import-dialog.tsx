@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { createPurchaseBatch, addPurchaseItem } from "@/actions/purchase";
-import { ModelItem } from "@/lib/types";
+import { ModelItem, StockRecordWithModel } from "@/lib/types";
 
 // Local interface - different from database PurchaseItem
 interface PurchaseItem {
@@ -37,6 +37,7 @@ interface PurchaseImportDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  selectedItems?: StockRecordWithModel[];
 }
 
 type ModelRowProps = {
@@ -196,6 +197,7 @@ export function PurchaseImportDialog({
   trigger,
   open,
   onOpenChange,
+  selectedItems = [],
 }: PurchaseImportDialogProps) {
   const router = useRouter();
   const [orderItems, setOrderItems] = React.useState<PurchaseItem[]>([
@@ -205,14 +207,109 @@ export function PurchaseImportDialog({
   const [totalItems, setTotalItems] = React.useState(2);
   const [totalQuantity, setTotalQuantity] = React.useState(100);
   const [supplierId, setSupplierId] = React.useState<number | null>(null);
-
+  const [orderDate, setOrderDate] = React.useState<string>(() => {
+    // Set default order date to today
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  });
+  const [expectedDeliveryDays, setExpectedDeliveryDays] = React.useState<number>(7); // Default to 7 days
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = React.useState<string>(() => {
+    // Calculate default expected delivery date (7 days from today)
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  });
+  
+  // Use a ref to track if we've already processed the selected items to prevent infinite loops
+  const processedRef = React.useRef(false);
+  const selectedItemsRef = React.useRef(selectedItems);
+  
+  // Store selectedItems in a ref to avoid dependency issues
   React.useEffect(() => {
+    selectedItemsRef.current = selectedItems;
+  }, [selectedItems]);
+  
+  // Initialize order items from selected inventory items when the dialog opens
+  React.useEffect(() => {
+    // Reset the ref when dialog opens/closes
+    if (!open) {
+      processedRef.current = false;
+      
+      // Reset if dialog closes
+      setOrderItems([
+        { id: 1, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+        { id: 2, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
+      ]);
+      setTotalItems(2);
+      return;
+    }
+    
+    // Only process selected items once when dialog opens
+    const items = selectedItemsRef.current;
+    if (open && items && items.length > 0 && !processedRef.current) {
+      processedRef.current = true;
+      
+      // Group items by product to group same products with different models
+      const groupedByProduct: Record<string, StockRecordWithModel[]> = {};
+      
+      items.forEach(item => {
+        const productId = item.product_models.product_id?.toString() || '';
+        if (!groupedByProduct[productId]) {
+          groupedByProduct[productId] = [];
+        }
+        groupedByProduct[productId].push(item);
+      });
+      
+      // Convert grouped items to purchase items
+      const initialItems: PurchaseItem[] = Object.entries(groupedByProduct).map(([productId, items], index) => {
+        // Get first item for product name
+        const firstItem = items[0];
+        const productName = firstItem.product_models.products.product_name || '';
+        
+        // Convert each variant to a model
+        const models: ModelItem[] = items.map((item, modelIndex) => ({
+          id: modelIndex + 1,
+          name: item.product_models.model_name || '',
+          quantity: 1 // Suggest order quantity based on current stock
+        }));
+        
+        return {
+          id: index + 1,
+          isVisible: true,
+          product_name: productName,
+          quantity: models.reduce((sum, model) => sum + model.quantity, 0),
+          product_id: Number(productId),
+          models,
+        };
+      });
+      
+      if (initialItems.length > 0) {
+        setOrderItems(initialItems);
+        setTotalItems(initialItems.length);
+      }
+    }
+  }, [open]);
+
+  // Calculate total quantity whenever orderItems changes
+  React.useEffect(() => {
+    // Use a comparison to prevent unnecessary state updates that could cause infinite loops
     const newTotalQuantity = orderItems.reduce(
       (sum, item) => sum + item.models.reduce((modelSum, model) => modelSum + model.quantity, 0), 
       0
     );
-    setTotalQuantity(newTotalQuantity);
-  }, [orderItems]);
+    
+    if (newTotalQuantity !== totalQuantity) {
+      setTotalQuantity(newTotalQuantity);
+    }
+  }, [orderItems, totalQuantity]);
+
+  // Update expected delivery date when order date or expected delivery days change
+  React.useEffect(() => {
+    const date = new Date(orderDate);
+    date.setDate(date.getDate() + expectedDeliveryDays);
+    setExpectedDeliveryDate(date.toISOString().split('T')[0]);
+  }, [orderDate, expectedDeliveryDays]);
+  
   const addNewItem = () => {
     const newId = orderItems.length === 0
       ? 1 
@@ -361,7 +458,8 @@ export function PurchaseImportDialog({
     }
 
     try {
-      const batch = await createPurchaseBatch(supplierId);
+      // Include order date and expected delivery date in the batch creation
+      const batch = await createPurchaseBatch(supplierId, orderDate, expectedDeliveryDate);
       
       for (const item of orderItems) {
         console.log(`Processing product: ${item.product_name} with ${item.models.length} models`);
@@ -419,13 +517,28 @@ export function PurchaseImportDialog({
           <label className="text-sm font-medium mb-2 block">
             叫貨日期
           </label>
-          <Input type="date" placeholder="yyyy/mm/dd" />
+          <Input 
+            type="date" 
+            placeholder="yyyy/mm/dd" 
+            value={orderDate}
+            onChange={(e) => setOrderDate(e.target.value)}
+          />
         </div>
         <div>
           <label className="text-sm font-medium mb-2 block">
-            預計到貨日
+            預計到貨天數
           </label>
-          <Input type="date" placeholder="yyyy/mm/dd" />
+          <div className="flex items-center gap-2">
+            <Input
+              value={expectedDeliveryDays}
+              onChange={(e) => setExpectedDeliveryDays(Number(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">天後</span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            預計到貨日期：{expectedDeliveryDate}
+          </p>
         </div>
       </div>
       <div className="my-6">

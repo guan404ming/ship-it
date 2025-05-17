@@ -112,7 +112,8 @@ export default function PurchaseTempClient() {
                 
                 <PurchaseImportDialog 
                   open={isDialogOpen} 
-                  onOpenChange={setIsDialogOpen} 
+                  onOpenChange={setIsDialogOpen}
+                  selectedItems={[]}
                 />
               </div>
 

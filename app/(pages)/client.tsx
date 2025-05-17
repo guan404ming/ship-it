@@ -285,7 +285,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                         onClick={handleBulkDelete}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        刪除
+                        刪除 ({selectedItems.size})
                       </Button>
                     </div>
                   )}

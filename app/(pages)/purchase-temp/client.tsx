@@ -9,6 +9,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Trash2,
 } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -115,6 +116,36 @@ export default function PurchaseTempClient() {
     }
   };
   
+  // Get selected items count
+  const selectedItemsCount = Object.values(selectedRows).filter(Boolean).length;
+  
+  // Get selected items data
+  const getSelectedItemsData = () => {
+    return filteredData.filter(item => selectedRows[item.id]);
+  };
+  
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    // Placeholder for future implementation
+    console.log("以下項目將被刪除:", getSelectedItemsData());
+    alert(`已選擇 ${selectedItemsCount} 個項目準備刪除`);
+    
+    // Here you would implement the actual delete logic in a real application
+    // For now, just clear the selection
+    setSelectedRows({});
+  };
+  
+  // Handle marking items as delivered
+  const handleMarkAsDelivered = () => {
+    // Placeholder for future implementation
+    console.log("以下項目將被標記為已送達:", getSelectedItemsData());
+    alert(`已標記 ${selectedItemsCount} 個項目為已送達`);
+    
+    // Here you would implement the actual API call to update the status
+    // For now, just clear the selection
+    setSelectedRows({});
+  };
+  
 
   return (
     <SidebarProvider
@@ -191,6 +222,29 @@ export default function PurchaseTempClient() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full max-w-sm h-10"
                   />
+                  
+                  {/* 當有選擇項目時顯示的操作按鈕 */}
+                  {selectedItemsCount > 0 && (
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleMarkAsDelivered}
+                        className="bg-[#08678C]"
+                      >
+                        <PackageIcon className="mr-2 h-4 w-4" />
+                        標記為已送達 ({selectedItemsCount})
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        刪除 ({selectedItemsCount})
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 items-center">
                   {searchQuery && (

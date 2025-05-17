@@ -199,8 +199,8 @@ export default function PurchaseTempClient() {
                         </TableHead>
                         <TableHead>進貨單號</TableHead>
                         <TableHead>廠商名稱</TableHead>
-                        <TableHead>產品分類</TableHead>
-                        <TableHead>產品名稱</TableHead>
+                        <TableHead>商品分類</TableHead>
+                        <TableHead>商品名稱</TableHead>
                         <TableHead>規格</TableHead>
                         <TableHead className="text-right">數量</TableHead>
                         <TableHead className="text-right">單價</TableHead>

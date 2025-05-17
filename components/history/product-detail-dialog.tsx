@@ -58,7 +58,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, category
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw] sm:max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>產品規格詳情 - {product_name}</DialogTitle>
+          <DialogTitle>商品規格詳情 - {product_name}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -299,7 +299,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, category
           
           <div className="text-sm text-muted-foreground mt-4">
             <p>
-              <strong>產品資訊:</strong> {product_name} ({category_name}) - 廠商代碼: {sku}
+              <strong>商品資訊:</strong> {product_name} ({category_name}) - 廠商名稱: {sku}
             </p>
             <p>
               <strong>備註:</strong> 成長率表示相較於前一個相同時間區間的變化率。例如，選擇最近7天時，會比較與前7天的數據。

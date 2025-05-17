@@ -281,7 +281,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                         <TableHead className="w-12">
                           <Checkbox />
                         </TableHead>
-                        <TableHead>產品名稱</TableHead>
+                        <TableHead>商品名稱</TableHead>
                         <TableHead>型號</TableHead>
                         <TableHead
                           className="cursor-pointer text-right"

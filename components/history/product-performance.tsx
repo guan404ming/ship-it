@@ -68,7 +68,7 @@ function calculateProductGrowthRates(
     previousPeriodEnd
   } = getGrowthComparisonPeriods(timeRange, customDateRange, referenceDate);
   
-  // 獲取所有產品數據
+  // 獲取所有商品數據
   const allData = product.models.flatMap(model => model.data);
   
   // 將數據分為兩個區間
@@ -161,7 +161,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
 
 
   const groupedProductsData = React.useMemo(() => {
-    // 1. 按產品名稱進行分組
+    // 1. 按商品名稱進行分組
     const groupedByName = productSalesData.reduce((acc, product) => {
       const key = `${product.product_name}-${product.category_name}-${product.sku}`;
       if (!acc[key]) {
@@ -339,9 +339,9 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                   }}
                 />
               </TableHead>
-              <TableHead>廠商代碼</TableHead>
-              <TableHead>產品分類</TableHead>
-              <TableHead>產品名稱</TableHead>
+              <TableHead>廠商名稱</TableHead>
+              <TableHead>商品分類</TableHead>
+              <TableHead>商品名稱</TableHead>
               <TableHead>規格</TableHead>
               <TableHead className="text-right">期間銷售量 (成長率)</TableHead>
               <TableHead className="text-right">期間銷售額 (成長率)</TableHead>
@@ -371,7 +371,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                 const isSelected = selectedProducts.includes(product.id);
                 const { startDate, endDate } = getDateRange();
                 
-                // 計算所選時間範圍內產品所有規格的數據總和
+                // 計算所選時間範圍內商品所有規格的數據總和
                 const salesData = getProductDateRangeData(product, startDate, endDate);
                 
                 const totalQuantity = salesData.reduce((sum, item) => sum + item.quantity, 0);
@@ -561,7 +561,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
               時間範圍：可選擇預設時間區間（7天、30天、90天、180天），或設定自訂日期範圍<br />
               數據選擇：可選擇顯示銷售額或銷售量<br />
               商品比較：勾選多個商品可同時比較其銷售表現<br />
-              規格詳情：點擊「查看 X 種規格」可比較同一產品的不同規格
+              規格詳情：點擊「查看 X 種規格」可比較同一商品的不同規格
             </p>
           </CardContent>
         </Card>

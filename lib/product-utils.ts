@@ -5,7 +5,7 @@ import {
 import { SalesData, ProductSalesModel, GroupedProductSales } from "@/lib/types";
 
 /**
- * 計算產品在指定時間範圍內的銷售數據
+ * 計算商品在指定時間範圍內的銷售數據
  */
 export function getProductDateRangeData(product: GroupedProductSales, startDate: Date, endDate: Date): SalesData[] {
   // 收集所有型號的數據並按日期合併
@@ -38,7 +38,7 @@ export function getProductDateRangeData(product: GroupedProductSales, startDate:
 }
 
 /**
- * 計算產品的成長率
+ * 計算商品的成長率
  */
 export function calculateProductGrowthRates(
   product: GroupedProductSales,
@@ -54,7 +54,7 @@ export function calculateProductGrowthRates(
     previousPeriodEnd
   } = getGrowthComparisonPeriods(timeRange, customDateRange, referenceDate);
   
-  // 獲取所有產品數據
+  // 獲取所有商品數據
   const allData = product.models?.flatMap(model => model.data) || [];
   
   // 將數據分為兩個區間
@@ -83,7 +83,7 @@ export function calculateProductGrowthRates(
 }
 
 /**
- * 計算產品型號的成長率
+ * 計算商品型號的成長率
  */
 export function calculateProductModelGrowthRates(
   model: ProductSalesModel,

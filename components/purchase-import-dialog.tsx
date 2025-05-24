@@ -10,18 +10,25 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { createPurchaseBatch, addPurchaseItem } from "@/actions/purchase";
-import { ModelItem, StockRecordWithModel } from "@/lib/types";
+import { StockRecordWithModel } from "@/lib/types";
 
-// Local interface - different from database PurchaseItem
-interface PurchaseItem {
+// Local interface for purchase items in the dialog - different from database PurchaseItem
+interface LocalPurchaseItem {
   id: number;
   isVisible: boolean;
   product_name: string;
   quantity: number;
   model_id?: number;
   product_id?: number;
-  models: ModelItem[]; 
+  models: LocalModelItem[]; 
   note?: string;
+}
+
+// Local interface for model items in the dialog
+interface LocalModelItem {
+  id: number;
+  name: string;
+  quantity: number;
 }
 import {
   Dialog,
@@ -41,7 +48,7 @@ interface PurchaseImportDialogProps {
 }
 
 type ModelRowProps = {
-  model: ModelItem;
+  model: LocalModelItem;
   onNameChange: (name: string) => void;
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
@@ -81,7 +88,7 @@ const ModelRow = ({ model, onNameChange, onQuantityChange, onRemove }: ModelRowP
 );
 
 type ProductCardProps = {
-  item: PurchaseItem;
+  item: LocalPurchaseItem;
   onProductNameChange: (value: string) => void;
   onAddModel: () => void;
   onUpdateModelName: (modelId: number, name: string) => void;
@@ -200,7 +207,7 @@ export function PurchaseImportDialog({
   selectedItems = [],
 }: PurchaseImportDialogProps) {
   const router = useRouter();
-  const [orderItems, setOrderItems] = React.useState<PurchaseItem[]>([
+  const [orderItems, setOrderItems] = React.useState<LocalPurchaseItem[]>([
     { id: 1, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
     { id: 2, isVisible: true, product_name: "", quantity: 50, models: [{ id: 1, name: "", quantity: 1 }] },
   ]);
@@ -253,7 +260,7 @@ export function PurchaseImportDialog({
       const groupedByProduct: Record<string, StockRecordWithModel[]> = {};
       
       items.forEach(item => {
-        const productId = item.product_models.product_id?.toString() || '';
+        const productId = item.product_id?.toString() || '';
         if (!groupedByProduct[productId]) {
           groupedByProduct[productId] = [];
         }
@@ -261,15 +268,15 @@ export function PurchaseImportDialog({
       });
       
       // Convert grouped items to purchase items
-      const initialItems: PurchaseItem[] = Object.entries(groupedByProduct).map(([productId, items], index) => {
+      const initialItems: LocalPurchaseItem[] = Object.entries(groupedByProduct).map(([productId, items], index) => {
         // Get first item for product name
         const firstItem = items[0];
-        const productName = firstItem.product_models.products.product_name || '';
+        const productName = firstItem.product_name || '';
         
         // Convert each variant to a model
-        const models: ModelItem[] = items.map((item, modelIndex) => ({
+        const models: LocalModelItem[] = items.map((item, modelIndex) => ({
           id: modelIndex + 1,
-          name: item.product_models.model_name || '',
+          name: item.model_name || '',
           quantity: 1 // Suggest order quantity based on current stock
         }));
         
@@ -458,6 +465,7 @@ export function PurchaseImportDialog({
     }
 
     try {
+      // TODO: 前端將叫貨批次資料送到後端
       // Include order date and expected delivery date in the batch creation
       const batch = await createPurchaseBatch(supplierId, orderDate, expectedDeliveryDate);
       
@@ -467,7 +475,6 @@ export function PurchaseImportDialog({
         for (const model of item.models) {
           const modelId = Math.floor(Math.random() * 10000); // 模擬生成 modelId
           console.log(`Adding model: ${model.name}, quantity: ${model.quantity}`);
-          
           await addPurchaseItem(
             batch.batch_id,
             modelId,

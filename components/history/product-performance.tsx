@@ -17,117 +17,18 @@ import { ProductDetailDialog } from "./product-detail-dialog"
 import { 
   getDateRange as getDateRangeUtil
 } from "@/lib/date-utils"
-import { SalesData } from "@/lib/types"
-import { getGrowthComparisonPeriods, calculateGrowthRate } from "@/lib/date-utils"
-
-// 本地函式用於類型兼容性
-function getProductDateRangeData(product: GroupedProduct, startDate: Date, endDate: Date): SalesData[] {
-  // Only process if models exist
-  if (!product.models) return [];
-  
-  const dateMap = new Map<string, { date: string, amount: number, quantity: number }>();
-
-  product.models.forEach(model => {
-    model.data
-      .filter(item => {
-        const itemDate = new Date(item.date);
-        return itemDate >= startDate && itemDate <= endDate;
-      })
-      .forEach(item => {
-        if (dateMap.has(item.date)) {
-          const existing = dateMap.get(item.date)!;
-          dateMap.set(item.date, {
-            date: item.date,
-            amount: existing.amount + item.amount,
-            quantity: existing.quantity + item.quantity
-          });
-        } else {
-          dateMap.set(item.date, { ...item });
-        }
-      });
-  });
-
-  return Array.from(dateMap.values()).sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-}
-
-function calculateProductGrowthRates(
-  product: GroupedProduct,
-  timeRange: string,
-  customDateRange: { start: string, end: string } | null,
-  referenceDate: Date = new Date("2025-05-01")
-): { quantityGrowth?: number, amountGrowth?: number } {
-  if (!product.models) return {};
-  
-  // 獲取比較期間
-  const {
-    currentPeriodStart,
-    currentPeriodEnd,
-    previousPeriodStart,
-    previousPeriodEnd
-  } = getGrowthComparisonPeriods(timeRange, customDateRange, referenceDate);
-  
-  // 獲取所有商品數據
-  const allData = product.models.flatMap(model => model.data);
-  
-  // 將數據分為兩個區間
-  const currentPeriodData = allData.filter(item => {
-    const date = new Date(item.date);
-    return date >= currentPeriodStart && date <= currentPeriodEnd;
-  });
-  
-  const previousPeriodData = allData.filter(item => {
-    const date = new Date(item.date);
-    return date >= previousPeriodStart && date <= previousPeriodEnd;
-  });
-  
-  // 計算當前區間和前一區間的總量
-  const currentQuantity = currentPeriodData.reduce((sum, item) => sum + item.quantity, 0);
-  const previousQuantity = previousPeriodData.reduce((sum, item) => sum + item.quantity, 0);
-  
-  const currentAmount = currentPeriodData.reduce((sum, item) => sum + item.amount, 0);
-  const previousAmount = previousPeriodData.reduce((sum, item) => sum + item.amount, 0);
-  
-  // 計算成長率
-  const quantityGrowth = calculateGrowthRate(currentQuantity, previousQuantity);
-  const amountGrowth = calculateGrowthRate(currentAmount, previousAmount);
-  
-  return { quantityGrowth, amountGrowth };
-}
-
-// 本地接口定義
-interface ProductModel {
-  id: string;
-  model_name: string;
-  data: SalesData[];
-}
-
-interface GroupedProduct {
-  id: string;
-  sku: string;
-  product_name: string;
-  models: ProductModel[];
-}
-
-interface FlatProduct {
-  id: string | number;
-  sku: string;
-  product_name: string;
-  category_name: string;
-  model_name?: string;
-  data?: SalesData[];
-}
+import { GroupedProductSales } from "@/lib/types"
+import { getProductDateRangeData, calculateProductGrowthRates } from "@/lib/product-utils"
 
 interface ProductPerformanceProps {
-  productSalesData: FlatProduct[]
+  productSalesData: GroupedProductSales[]
 }
 
 // 定義排序類型
 type SortField = 'quantity' | 'quantityGrowth' | 'amount' | 'amountGrowth';
 type SortDirection = 'asc' | 'desc';
 
-interface SortableProduct extends GroupedProduct {
+interface SortableProduct extends GroupedProductSales {
   totalQuantity: number;
   totalAmount: number;
   quantityGrowth?: number;
@@ -166,27 +67,8 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
   }, [isMobile])
 
   const groupedProductsData = React.useMemo(() => {
-    // 1. 按商品名稱進行分組
-    const groupedByName = productSalesData.reduce((acc, product) => {
-      const key = `${product.product_name}-${product.sku}`;
-      if (!acc[key]) {
-        acc[key] = {
-          id: key,
-          sku: product.sku,
-          product_name: product.product_name,
-          models: []
-        };
-      }
-      acc[key].models.push({
-        id: product.id.toString(),
-        model_name: product.model_name || "",
-        data: product.data || []
-      });
-      return acc;
-    }, {} as Record<string, GroupedProduct>);
-
-    // 2. 轉換為陣列形式
-    return Object.values(groupedByName);
+    // The data is already properly grouped by product with models
+    return productSalesData;
   }, [productSalesData]);
 
   // 計算日期範圍
@@ -202,7 +84,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
     const { startDate, endDate } = getDateRange();
 
     return groupedProductsData
-      .filter(product => selectedProducts.includes(product.id))
+      .filter(product => selectedProducts.includes(product.product_id.toString()))
       .map(product => {
         return {
           ...product,
@@ -241,8 +123,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
     const processedProducts = groupedProductsData
       .filter(product => {
         if (searchQuery) {
-          return product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+          return product.product_name?.toLowerCase().includes(searchQuery.toLowerCase());
         }
         return true;
       })
@@ -405,14 +286,14 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                   checked={selectedProducts.length === groupedProductsData.length}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setSelectedProducts(groupedProductsData.map(product => product.id.toString()));
+                      setSelectedProducts(groupedProductsData.map(product => product.product_id.toString()));
                     } else {
                       setSelectedProducts([]);
                     }
                   }}
                 />
               </TableHead>
-              <TableHead>廠商名稱</TableHead>
+              <TableHead>商品ID</TableHead>
               <TableHead>商品名稱</TableHead>
               <TableHead>規格</TableHead>
               <TableHead 
@@ -462,25 +343,25 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
               </TableRow>
             ) : (
               processedAndSortedProducts.map((product) => {
-                const isSelected = selectedProducts.includes(product.id);
+                const isSelected = selectedProducts.includes(product.product_id.toString());
                 const modelsCount = product.models?.length || 0;
                 
                 return (
-                  <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
+                  <TableRow key={product.product_id} className={isSelected ? "bg-muted/50" : ""}>
                     <TableCell>
                       <Checkbox
-                        id={`product-table-${product.id}`}
+                        id={`product-table-${product.product_id}`}
                         checked={isSelected}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedProducts([...selectedProducts, product.id.toString()])
+                            setSelectedProducts([...selectedProducts, product.product_id.toString()])
                           } else {
-                            setSelectedProducts(selectedProducts.filter(id => id !== product.id))
+                            setSelectedProducts(selectedProducts.filter(id => id !== product.product_id.toString()))
                           }
                         }}
                       />
                     </TableCell>
-                    <TableCell>{product.sku}</TableCell>
+                    <TableCell>{product.product_id}</TableCell>
                     <TableCell className="flex items-center gap-2">
                       {product.product_name}
                       {modelsCount > 1 && (
@@ -489,7 +370,7 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                           size="sm"
                           className="h-7 px-2 text-xs"
                           onClick={() => {
-                            setSelectedProductForDetail(product.id.toString());
+                            setSelectedProductForDetail(product.product_id.toString());
                             setDetailDialogOpen(true);
                           }}
                         >
@@ -624,12 +505,12 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
                     
                     return (
                       <Line
-                        key={`${product.id}-${chartType}`}
+                        key={`${product.product_id}-${chartType}`}
                         data={product.filteredData}
                         type="monotone"
                         dataKey={chartType}
                         stroke={color}
-                        name={product.product_name}
+                        name={product.product_name || "未知商品"}
                         strokeWidth={2}
                       />
                     );
@@ -646,10 +527,10 @@ export function ProductPerformance({ productSalesData }: ProductPerformanceProps
         <ProductDetailDialog
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
-          product_name={groupedProductsData.find(p => p.id === selectedProductForDetail)?.product_name || ""}
+          product_name={groupedProductsData.find(p => p.product_id.toString() === selectedProductForDetail)?.product_name || ""}
           category_name={""}
-          sku={groupedProductsData.find(p => p.id === selectedProductForDetail)?.sku || ""}
-          models={groupedProductsData.find(p => p.id === selectedProductForDetail)?.models || []}
+          sku={selectedProductForDetail || ""}
+          models={groupedProductsData.find(p => p.product_id.toString() === selectedProductForDetail)?.models || []}
         />
       )}
 

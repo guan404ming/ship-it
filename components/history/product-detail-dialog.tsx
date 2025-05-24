@@ -44,7 +44,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, sku, mod
   // 每次打開 dialog 時，自動全選所有 models
   React.useEffect(() => {
     if (open && models.length > 0) {
-      setSelectedModels(models.map(model => model.id));
+      setSelectedModels(models.map(model => model.model_id));
     }
   }, [open, models]);
 
@@ -190,7 +190,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, sku, mod
                     />
                     <Legend />
                     {models
-                      .filter(model => selectedModels.includes(model.id))
+                      .filter(model => selectedModels.includes(model.model_id))
                       .map((model, index) => {
                         const { startDate, endDate } = getDateRange();
                         
@@ -207,12 +207,12 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, sku, mod
 
                         return (
                           <Line
-                            key={`${model.id}-${chartType}`}
+                            key={`${model.model_id}-${chartType}`}
                             data={filteredData}
                             type="monotone"
                             dataKey={chartType}
                             stroke={color}
-                            name={model.model_name}
+                            name={model.model_name || "未知規格"}
                             strokeWidth={2}
                           />
                         );
@@ -235,7 +235,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, sku, mod
                           checked={selectedModels.length === models.length}
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              setSelectedModels(models.map(model => model.id));
+                              setSelectedModels(models.map(model => model.model_id));
                             } else {
                               setSelectedModels([]);
                             }
@@ -251,7 +251,7 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, sku, mod
                   </TableHeader>
                   <TableBody>
                     {models.map(model => {
-                      const isSelected = selectedModels.includes(model.id);
+                      const isSelected = selectedModels.includes(model.model_id);
                       const { startDate, endDate } = getDateRange();
                       
                       // 過濾日期範圍內的數據
@@ -273,16 +273,16 @@ export function ProductDetailDialog({ open, onOpenChange, product_name, sku, mod
                       );
                       
                       return (
-                        <TableRow key={model.id} className={isSelected ? "bg-muted/50" : ""}>
+                        <TableRow key={model.model_id} className={isSelected ? "bg-muted/50" : ""}>
                           <TableCell>
                             <Checkbox
-                              id={`model-${model.id}`}
+                              id={`model-${model.model_id}`}
                               checked={isSelected}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedModels([...selectedModels, model.id]);
+                                  setSelectedModels([...selectedModels, model.model_id]);
                                 } else {
-                                  setSelectedModels(selectedModels.filter(id => id !== model.id));
+                                  setSelectedModels(selectedModels.filter(id => id !== model.model_id));
                                 }
                               }}
                             />

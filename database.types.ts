@@ -24,70 +24,6 @@ export type Database = {
         }
         Relationships: []
       }
-      categories: {
-        Row: {
-          category_id: number
-          category_name: string | null
-          parent_id: number | null
-        }
-        Insert: {
-          category_id?: number
-          category_name?: string | null
-          parent_id?: number | null
-        }
-        Update: {
-          category_id?: number
-          category_name?: string | null
-          parent_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["category_id"]
-          },
-        ]
-      }
-      inventory_movements: {
-        Row: {
-          created_at: string | null
-          model_id: number | null
-          movement_id: number
-          movement_type: string | null
-          note: string | null
-          order_id: string | null
-          quantity: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          model_id?: number | null
-          movement_id?: number
-          movement_type?: string | null
-          note?: string | null
-          order_id?: string | null
-          quantity?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          model_id?: number | null
-          movement_id?: number
-          movement_type?: string | null
-          note?: string | null
-          order_id?: string | null
-          quantity?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_movements_model_id_fkey"
-            columns: ["model_id"]
-            isOneToOne: false
-            referencedRelation: "product_models"
-            referencedColumns: ["model_id"]
-          },
-        ]
-      }
       order_items: {
         Row: {
           item_id: number
@@ -146,42 +82,36 @@ export type Database = {
       orders: {
         Row: {
           buyer_id: number | null
-          cancel_reason: string | null
           completed_at: string | null
           created_at: string | null
           order_id: string
           order_status: Database["public"]["Enums"]["order_status"] | null
           payment_time: string | null
           product_total_price: number | null
-          return_refund_status: string | null
           shipped_at: string | null
           shipping_fee: number | null
           total_paid: number | null
         }
         Insert: {
           buyer_id?: number | null
-          cancel_reason?: string | null
           completed_at?: string | null
           created_at?: string | null
           order_id: string
           order_status?: Database["public"]["Enums"]["order_status"] | null
           payment_time?: string | null
           product_total_price?: number | null
-          return_refund_status?: string | null
           shipped_at?: string | null
           shipping_fee?: number | null
           total_paid?: number | null
         }
         Update: {
           buyer_id?: number | null
-          cancel_reason?: string | null
           completed_at?: string | null
           created_at?: string | null
           order_id?: string
           order_status?: Database["public"]["Enums"]["order_status"] | null
           payment_time?: string | null
           product_total_price?: number | null
-          return_refund_status?: string | null
           shipped_at?: string | null
           shipping_fee?: number | null
           total_paid?: number | null
@@ -204,7 +134,6 @@ export type Database = {
           original_price: number | null
           product_id: number | null
           promo_price: number | null
-          sku: string | null
         }
         Insert: {
           created_at?: string | null
@@ -213,7 +142,6 @@ export type Database = {
           original_price?: number | null
           product_id?: number | null
           promo_price?: number | null
-          sku?: string | null
         }
         Update: {
           created_at?: string | null
@@ -222,7 +150,6 @@ export type Database = {
           original_price?: number | null
           product_id?: number | null
           promo_price?: number | null
-          sku?: string | null
         }
         Relationships: [
           {
@@ -236,52 +163,44 @@ export type Database = {
       }
       products: {
         Row: {
-          category_id: number | null
           listed_date: string | null
           product_id: number
           product_name: string | null
           status: string | null
         }
         Insert: {
-          category_id?: number | null
           listed_date?: string | null
           product_id?: number
           product_name?: string | null
           status?: string | null
         }
         Update: {
-          category_id?: number | null
           listed_date?: string | null
           product_id?: number
           product_name?: string | null
           status?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["category_id"]
-          },
-        ]
+        Relationships: []
       }
       purchase_batches: {
         Row: {
           batch_id: number
           created_at: string | null
+          expect_date: string | null
           status: string | null
           supplier_id: number | null
         }
         Insert: {
           batch_id?: number
           created_at?: string | null
+          expect_date?: string | null
           status?: string | null
           supplier_id?: number | null
         }
         Update: {
           batch_id?: number
           created_at?: string | null
+          expect_date?: string | null
           status?: string | null
           supplier_id?: number | null
         }
@@ -300,6 +219,7 @@ export type Database = {
           batch_id: number | null
           item_id: number
           model_id: number | null
+          note: string | null
           quantity: number | null
           unit_cost: number | null
         }
@@ -307,6 +227,7 @@ export type Database = {
           batch_id?: number | null
           item_id?: number
           model_id?: number | null
+          note?: string | null
           quantity?: number | null
           unit_cost?: number | null
         }
@@ -314,6 +235,7 @@ export type Database = {
           batch_id?: number | null
           item_id?: number
           model_id?: number | null
+          note?: string | null
           quantity?: number | null
           unit_cost?: number | null
         }

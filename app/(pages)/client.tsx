@@ -101,10 +101,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
           item.supplier_name
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          item.product_models.products.product_name
+          item.product_name
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          item.product_models.model_name
+          item.model_name
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase())
       );
@@ -440,10 +440,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                             {item.supplier_name ?? "-"}
                           </TableCell>
                           <TableCell>
-                            {item.product_models.products.product_name ?? "-"}
+                            {item.product_name ?? "-"}
                           </TableCell>
                           <TableCell>
-                            {item.product_models.model_name ?? "-"}
+                            {item.model_name ?? "-"}
                           </TableCell>
                           <TableCell
                             className={`text-right font-mono ${

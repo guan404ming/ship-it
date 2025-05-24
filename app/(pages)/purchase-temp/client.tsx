@@ -29,6 +29,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
+// TODO: 前端需要從後端獲取叫貨資料，目前使用假資料
 import { purchaseOrderData } from "@/lib/data/purchase-data";
 
 export default function PurchaseTempClient() {

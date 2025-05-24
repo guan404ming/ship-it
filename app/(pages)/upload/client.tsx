@@ -74,6 +74,7 @@ function UploadContent() {
   };
 
   // Import history data from centralized location
+  // TODO: [前後端溝通] 前端需要從後端獲取匯入歷史資料，目前使用假資料
   const [importHistory] = React.useState<ImportHistory[]>(mockImportHistory);
 
   // Validation handlers
@@ -217,6 +218,7 @@ function UploadContent() {
                       </div>
 
                       <Button className="w-full" type="submit">
+                        {/* TODO: 前端需要將檔案和匯入類型資料送到後端 */}
                         確認上傳
                       </Button>
                     </div>
@@ -402,6 +404,7 @@ function UploadContent() {
                       </div>
 
                       <Button className="w-full" type="submit">
+                        {/* TODO: 前端需要將手動輸入的商品資料送到後端 */}
                         確認輸入
                       </Button>
                     </div>

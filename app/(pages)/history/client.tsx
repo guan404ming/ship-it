@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverallPerformance } from "@/components/history/overall-performance";
 import { ProductPerformance } from "@/components/history/product-performance";
 import { SalesRankings } from "@/components/history/sales-rankings";
+
+// TODO: 前端需要根據使用者輸入的時間範圍從後端獲取銷售歷史資料，目前使用假資料
 import { salesData, productRankingData, productSalesData } from "@/lib/data/sales-data";
 
 

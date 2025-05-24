@@ -465,6 +465,7 @@ export function PurchaseImportDialog({
     }
 
     try {
+      // TODO: 前端將叫貨批次資料送到後端
       // Include order date and expected delivery date in the batch creation
       const batch = await createPurchaseBatch(supplierId, orderDate, expectedDeliveryDate);
       
@@ -474,7 +475,6 @@ export function PurchaseImportDialog({
         for (const model of item.models) {
           const modelId = Math.floor(Math.random() * 10000); // 模擬生成 modelId
           console.log(`Adding model: ${model.name}, quantity: ${model.quantity}`);
-          
           await addPurchaseItem(
             batch.batch_id,
             modelId,

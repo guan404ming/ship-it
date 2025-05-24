@@ -28,8 +28,6 @@ import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 
 interface InventoryClientProps {
   initialInventory: StockRecordWithModel[];
-  // TODO: Implement inventory movements history view
-  // initialMovements: InventoryMovementWithModel[];
 }
 
 export function InventoryClient({ initialInventory }: InventoryClientProps) {
@@ -180,6 +178,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
   // Handle bulk delete
   const handleBulkDelete = () => {
+    // TODO: 前端需要將刪除的項目 ID 送到後端
     // Placeholder for future implementation
     console.log("以下項目將被刪除:", getSelectedItemsData());
     alert(`已選擇 ${selectedItems.size} 個項目準備刪除`);

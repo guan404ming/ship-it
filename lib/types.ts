@@ -1,7 +1,6 @@
 import { Database } from "@/database.types";
 
 // Basic table types
-export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Product = Database["public"]["Tables"]["products"]["Row"];
 export type ProductModel = Database["public"]["Tables"]["product_models"]["Row"];
 export type StockRecord = Database["public"]["Tables"]["stock_records"]["Row"];
@@ -9,7 +8,6 @@ export type Supplier = Database["public"]["Tables"]["suppliers"]["Row"];
 export type Buyer = Database["public"]["Tables"]["buyers"]["Row"];
 export type Order = Database["public"]["Tables"]["orders"]["Row"];
 export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"];
-export type InventoryMovement = Database["public"]["Tables"]["inventory_movements"]["Row"];
 export type PurchaseBatch = Database["public"]["Tables"]["purchase_batches"]["Row"];
 export type PurchaseItem = Database["public"]["Tables"]["purchase_items"]["Row"];
 
@@ -17,14 +15,8 @@ export type PurchaseItem = Database["public"]["Tables"]["purchase_items"]["Row"]
 export type OrderStatus = Database["public"]["Enums"]["order_status"];
 
 // Composite types with relationships
-export type ProductWithCategory = Product & {
-  categories?: Category;
-};
-
 export type ProductModelWithProduct = ProductModel & {
-  products: Product & {
-    categories?: Category;
-  };
+  products: Product;
 };
 
 export type StockRecordWithModel = StockRecord & {
@@ -42,10 +34,6 @@ export type OrderItemWithDetails = OrderItem & {
   orders?: OrderWithBuyer;
   products?: Product;
   product_models?: ProductModel;
-};
-
-export type InventoryMovementWithModel = InventoryMovement & {
-  product_models: ProductModelWithProduct;
 };
 
 export type PurchaseBatchWithSupplier = PurchaseBatch & {
@@ -75,9 +63,7 @@ export interface ProductSalesModel {
 // 2. For flattened data with direct model_name and data properties
 export interface GroupedProductSales {
   id: string | number;
-  sku: string;
   product_name: string;
-  category_name: string;
   models?: ProductSalesModel[];  // For grouped representation
   model_name?: string;           // For flattened representation
   data?: SalesData[];            // For flattened representation
@@ -85,9 +71,7 @@ export interface GroupedProductSales {
 
 export interface RankingProduct {
   id: string | number;
-  sku: string;
   product_name: string;
-  category_name: string;
   model_name: string;
   sales: number;
   quantity: number;

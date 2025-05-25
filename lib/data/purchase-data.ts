@@ -1,6 +1,6 @@
-import {SupplierWithProductsWithProductModelsWithPurchaseItemWithPurchaseBatch} from "@/lib/types";
+import {MyInventory} from "@/lib/types";
 
-export const purchaseOrderData: SupplierWithProductsWithProductModelsWithPurchaseItemWithPurchaseBatch[] = [
+export const purchaseOrderData: MyInventory[] = [
   {
     // Supplier fields
     supplier_id: 1,

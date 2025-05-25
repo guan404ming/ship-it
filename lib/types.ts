@@ -27,7 +27,7 @@ export type StockRecordWithModel = StockRecord & ProductModel & Product & {
 };
 
 // 用於我的叫貨
-export type SupplierWithProductsWithProductModelsWithPurchaseItemWithPurchaseBatch = Supplier & Product & ProductModel & PurchaseItem & PurchaseBatch;
+export type MyInventory = Supplier & Product & ProductModel & PurchaseItem & PurchaseBatch;
 
 
 // 用於匯入歷史

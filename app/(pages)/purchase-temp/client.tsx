@@ -29,13 +29,14 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
+// TODO: 前端需要從後端獲取叫貨資料，目前使用假資料
 import { purchaseOrderData } from "@/lib/data/purchase-data";
 
 export default function PurchaseTempClient() {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedRows, setSelectedRows] = React.useState<Record<string, boolean>>({});
-  const [sortField, setSortField] = React.useState<"created_at" | "expected_arrival">("created_at");
+  const [sortField, setSortField] = React.useState<"created_at" | "expect_date">("created_at");
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
   const handlePurchaseOrderImport = () => {
@@ -52,17 +53,24 @@ export default function PurchaseTempClient() {
     if (searchQuery) {
       filtered = filtered.filter(
         (item) =>
-          item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.model_name.toLowerCase().includes(searchQuery.toLowerCase())
+          (item.product_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+          (item.supplier_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+          (item.model_name?.toLowerCase() || "").includes(searchQuery.toLowerCase())
       );
     }
 
     // Sort data based on the selected sort field and direction
     filtered.sort((a, b) => {
-      // Parse dates for proper comparison
-      const dateA = new Date(a[sortField]);
-      const dateB = new Date(b[sortField]);
+      // Handle null values and parse dates for proper comparison
+      const valueA = a[sortField];
+      const valueB = b[sortField];
+      
+      if (!valueA && !valueB) return 0;
+      if (!valueA) return 1;
+      if (!valueB) return -1;
+      
+      const dateA = new Date(valueA);
+      const dateB = new Date(valueB);
       
       // Compare dates
       if (sortDirection === "asc") {
@@ -76,7 +84,7 @@ export default function PurchaseTempClient() {
   }, [searchQuery, sortField, sortDirection]);
 
   // Toggle a single row selection
-  const toggleRowSelection = (id: string) => {
+  const toggleRowSelection = (id: number) => {
     setSelectedRows(prev => ({
       ...prev,
       [id]: !prev[id]
@@ -93,7 +101,7 @@ export default function PurchaseTempClient() {
       // Otherwise, select all filtered rows
       const newSelectedRows: Record<string, boolean> = {};
       filteredData.forEach(item => {
-        newSelectedRows[item.id] = true;
+        newSelectedRows[item.item_id] = true;
       });
       setSelectedRows(newSelectedRows);
     }
@@ -102,10 +110,10 @@ export default function PurchaseTempClient() {
   // Check if all filtered rows are selected
   const areAllRowsSelected = 
     filteredData.length > 0 && 
-    filteredData.every(item => selectedRows[item.id]);
+    filteredData.every(item => selectedRows[item.item_id]);
     
   // Handle column sorting
-  const handleSort = (field: "created_at" | "expected_arrival") => {
+  const handleSort = (field: "created_at" | "expect_date") => {
     if (sortField === field) {
       // Toggle sort direction if the same field is clicked again
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -121,7 +129,7 @@ export default function PurchaseTempClient() {
   
   // Get selected items data
   const getSelectedItemsData = () => {
-    return filteredData.filter(item => selectedRows[item.id]);
+    return filteredData.filter(item => selectedRows[item.item_id]);
   };
   
   // Handle bulk delete
@@ -296,10 +304,10 @@ export default function PurchaseTempClient() {
                         <TableHead>
                           <button 
                             className="flex items-center gap-1 focus:outline-none hover:text-primary"
-                            onClick={() => handleSort("expected_arrival")}
+                            onClick={() => handleSort("expect_date")}
                           >
                             <span>預計到貨日</span>
-                            {sortField === "expected_arrival" ? (
+                            {sortField === "expect_date" ? (
                               sortDirection === "asc" ? (
                                 <ArrowUp className="h-4 w-4" />
                               ) : (
@@ -316,11 +324,11 @@ export default function PurchaseTempClient() {
                     </TableHeader>
                     <TableBody>
                       {filteredData.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.item_id}>
                           <TableCell>
                             <Checkbox
-                              checked={selectedRows[item.id] || false}
-                              onCheckedChange={() => toggleRowSelection(item.id)}
+                              checked={selectedRows[item.item_id] || false}
+                              onCheckedChange={() => toggleRowSelection(item.item_id)}
                             />
                           </TableCell>
                           <TableCell>{item.supplier_name}</TableCell>
@@ -333,10 +341,10 @@ export default function PurchaseTempClient() {
                             {item.unit_cost}
                           </TableCell>
                           <TableCell>{item.created_at}</TableCell>
-                          <TableCell>{item.expected_arrival}</TableCell>
+                          <TableCell>{item.expect_date}</TableCell>
                           <TableCell>{item.note || "-"}</TableCell>
                           <TableCell>
-                            <PurchaseEditDialog purchaseId={item.id} />
+                            <PurchaseEditDialog purchaseId={item.item_id.toString()} />
                           </TableCell>
                         </TableRow>
                       ))}

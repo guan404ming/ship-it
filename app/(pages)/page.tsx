@@ -1,5 +1,4 @@
-
-// import { getInventoryStatus } from "@/actions/inventory";
+// TODO: 前端需要從後端獲取庫存資料
 import { mockInventoryData } from "@/lib/data/inventory-data";
 import { InventoryClient } from "./client";
 

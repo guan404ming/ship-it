@@ -3,7 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
-export async function createPurchaseBatch(supplierId: number, orderDate?: string, expectedDeliveryDate?: string) {
+export async function createPurchaseBatch(
+  supplierId: number,
+  orderDate?: string,
+  expectedDeliveryDate?: string
+) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -14,7 +18,7 @@ export async function createPurchaseBatch(supplierId: number, orderDate?: string
         supplier_id: supplierId,
         status: "pending",
         created_at: orderDate || new Date().toISOString(),
-        expected_delivery_date: expectedDeliveryDate,
+        expect_date: expectedDeliveryDate,
       },
     ])
     .select()

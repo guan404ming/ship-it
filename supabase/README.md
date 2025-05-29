@@ -2,14 +2,14 @@
 
 ## 1. Prerequisites
 
-- Install Bun / Node.js  
-- Install Supabase CLI  
+- Install Bun / Node.js
+- Install Supabase CLI
 
   ```bash
   npm install -g supabase
   ```
 
-- Install required packages  
+- Install required packages
 
   ```bash
   bun add @supabase/supabase-js @supabase/postgres-js
@@ -41,7 +41,7 @@ supabase link
 
 ## 4. Creating & Managing Migrations
 
-1. **Create a migration**  
+1. **Create a migration**
 
    ```bash
    supabase migration new create_categories_and_products
@@ -49,14 +49,14 @@ supabase link
 
 ## 5. Deploying to Production
 
-1. **Link remote project**  
+1. **Link remote project**
 
    ```bash
    supabase login
    supabase link
    ```
 
-2. **Push and apply migrations**  
+2. **Push and apply migrations**
 
    ```bash
    supabase db push
@@ -64,49 +64,59 @@ supabase link
 
 ## 6. Using Supabase in Code
 
-- **Dynamic schema creation (optional)**  
+- **Dynamic schema creation (optional)**
 
   ```ts
   // supabase.ts
-  import { createClient } from '@supabase/postgres-js'
-  import 'dotenv/config'
+  import { createClient } from "@supabase/postgres-js";
+  import "dotenv/config";
 
   const pg = createClient(process.env.SUPABASE_DB_URL!, {
     headers: {
       apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
       Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
     },
-  })
+  });
 
   export async function initSchema() {
     await pg.execute(`
       CREATE TABLE IF NOT EXISTS categories (...);
       CREATE TABLE IF NOT EXISTS products (...);
-    `)
+    `);
   }
   ```
 
-- **Standard CRUD (using supabase-js)**  
+- **Standard CRUD (using supabase-js)**
 
   ```ts
   // lib/supabase-client.ts
-  import { createClient } from '@supabase/supabase-js'
+  import { createClient } from "@supabase/supabase-js";
 
   export const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  );
   ```
 
 ## 7. Command Reference
 
-| Function                  | Command                             |
-|---------------------------|-------------------------------------|
-| Create new migration      | `supabase migration new <name>`     |
-| Apply pending migrations  | `supabase migration up`             |
-| Reset & replay migrations | `supabase db reset`                 |
-| Push to production        | `supabase db push`                  |
-| List migrations           | `supabase migration list`           |
-| Push to production        | `supabase db push`                  |
+| Function                  | Command                         |
+| ------------------------- | ------------------------------- |
+| Create new migration      | `supabase migration new <name>` |
+| Apply pending migrations  | `supabase migration up`         |
+| Reset & replay migrations | `supabase db reset`             |
+| Push to production        | `supabase db push`              |
+| List migrations           | `supabase migration list`       |
+| Push to production        | `supabase db push`              |
 
 ---
+
+# Init
+
+1. Login: `bun run supabase login`
+2. Link DB: `bun run supabase link`
+
+# Migrations
+
+1. Create migration: `bun run supabase migration new <name>`
+2. Apply migrations: `bun run supabase migration up`

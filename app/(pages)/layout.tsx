@@ -39,7 +39,7 @@ export default function PagesLayout({
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-col items-center justify-center h-screen">
+        <div className="flex flex-col items-center justify-center h-full w-full">
           {children}
         </div>
       </SidebarInset>

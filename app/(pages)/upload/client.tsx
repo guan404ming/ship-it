@@ -5,14 +5,11 @@ import { FileIcon, UploadIcon } from "lucide-react";
 import { IconFileImport } from "@tabler/icons-react";
 import { useSearchParams } from "next/navigation";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -43,11 +40,18 @@ function UploadContent() {
   const [productName, setProductName] = React.useState<string>("");
   const [modelName, setModelName] = React.useState<string>("");
   const [priceError, setPriceError] = React.useState<string | null>(null);
-  const [modelNameError, setModelNameError] = React.useState<string | null>(null);
+  const [modelNameError, setModelNameError] = React.useState<string | null>(
+    null
+  );
 
   // 新增的商品規格列表
   const [models, setModels] = React.useState<
-    Array<{ id: string; modelName: string; quantity: string; error: string | null }>
+    Array<{
+      id: string;
+      modelName: string;
+      quantity: string;
+      error: string | null;
+    }>
   >([]);
 
   // 檢查 URL 參數，自動選擇「庫存匯入」
@@ -120,22 +124,23 @@ function UploadContent() {
   // 新增規格
   const addModel = () => {
     if (!modelName.trim()) return;
-    
+
     // 檢查是否有重複的規格名稱
     const trimmedModelName = modelName.trim();
-    const isDuplicate = models.some(model => 
-      model.modelName.toLowerCase() === trimmedModelName.toLowerCase()
+    const isDuplicate = models.some(
+      (model) =>
+        model.modelName.toLowerCase() === trimmedModelName.toLowerCase()
     );
-    
+
     if (isDuplicate) {
       setModelNameError("此規格名稱已存在");
       return;
     }
-    
+
     const newId = `model-${Date.now()}`;
     setModels([
       ...models,
-      { id: newId, modelName: trimmedModelName, quantity: "", error: null }
+      { id: newId, modelName: trimmedModelName, quantity: "", error: null },
     ]);
     setModelName("");
     setModelNameError(null);
@@ -143,7 +148,7 @@ function UploadContent() {
 
   // 刪除規格
   const removeModel = (id: string) => {
-    setModels(models.filter(model => model.id !== id));
+    setModels(models.filter((model) => model.id !== id));
   };
 
   return (
@@ -285,48 +290,61 @@ function UploadContent() {
                           <div className="flex gap-2">
                             <div className="flex-1">
                               <Input
-                                      placeholder="請輸入規格名稱"
-                                      value={modelName}
-                                      onChange={(e) => {
-                                        const value = e.target.value;
-                                        setModelName(value);
-                                        
-                                        // 當使用者輸入時，檢查是否有重複的規格名稱
-                                        const trimmedValue = value.trim();
-                                        if (trimmedValue) {
-                                          const isDuplicate = models.some(model => 
-                                            model.modelName.toLowerCase() === trimmedValue.toLowerCase()
-                                          );
-                                          setModelNameError(isDuplicate ? "此規格名稱已存在" : null);
-                                        } else {
-                                          setModelNameError(null);
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && modelName.trim() && !modelNameError) {
-                                          e.preventDefault();
-                                          addModel();
-                                        }
-                                      }}
-                                      className={modelNameError ? "border-red-500" : ""}
+                                placeholder="請輸入規格名稱"
+                                value={modelName}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setModelName(value);
+
+                                  // 當使用者輸入時，檢查是否有重複的規格名稱
+                                  const trimmedValue = value.trim();
+                                  if (trimmedValue) {
+                                    const isDuplicate = models.some(
+                                      (model) =>
+                                        model.modelName.toLowerCase() ===
+                                        trimmedValue.toLowerCase()
+                                    );
+                                    setModelNameError(
+                                      isDuplicate ? "此規格名稱已存在" : null
+                                    );
+                                  } else {
+                                    setModelNameError(null);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (
+                                    e.key === "Enter" &&
+                                    modelName.trim() &&
+                                    !modelNameError
+                                  ) {
+                                    e.preventDefault();
+                                    addModel();
+                                  }
+                                }}
+                                className={
+                                  modelNameError ? "border-red-500" : ""
+                                }
                               />
                             </div>
-                            <Button 
+                            <Button
                               type="button"
                               onClick={addModel}
-                              disabled={!modelName.trim() || modelNameError !== null}
+                              disabled={
+                                !modelName.trim() || modelNameError !== null
+                              }
                             >
                               新增規格
                             </Button>
                           </div>
                           {modelNameError && (
-                            <p className="text-sm text-red-500">{modelNameError}</p>
+                            <p className="text-sm text-red-500">
+                              {modelNameError}
+                            </p>
                           )}
                         </div>
-                        
+
                         {/* 規格輸入區 */}
                         <div className="rounded-lg border p-4">
-                          
                           {models.length > 0 && (
                             <div className="space-y-3 mt-2">
                               <div className="grid grid-cols-5 gap-2 text-sm text-muted-foreground font-medium">
@@ -334,32 +352,56 @@ function UploadContent() {
                                 <div className="col-span-1">數量</div>
                                 <div className="col-span-1"></div>
                               </div>
-                              
+
                               {models.map((model) => (
-                                <div key={model.id} className="grid grid-cols-5 gap-2 items-center">
-                                  <div className="col-span-3 text-sm">{model.modelName}</div>
+                                <div
+                                  key={model.id}
+                                  className="grid grid-cols-5 gap-2 items-center"
+                                >
+                                  <div className="col-span-3 text-sm">
+                                    {model.modelName}
+                                  </div>
                                   <div className="col-span-1">
                                     <Input
                                       type="number"
                                       min="1"
                                       placeholder="數量"
                                       value={model.quantity}
-                                      onChange={(e) => validateModelQuantity(model.id, e.target.value)}
-                                      className={model.error ? "border-red-500" : ""}
+                                      onChange={(e) =>
+                                        validateModelQuantity(
+                                          model.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      className={
+                                        model.error ? "border-red-500" : ""
+                                      }
                                     />
                                     {model.error && (
-                                      <p className="text-sm text-red-500 mt-1">{model.error}</p>
+                                      <p className="text-sm text-red-500 mt-1">
+                                        {model.error}
+                                      </p>
                                     )}
                                   </div>
                                   <div className="col-span-1 flex justify-end">
-                                    <Button 
+                                    <Button
                                       type="button"
-                                      variant="ghost" 
+                                      variant="ghost"
                                       size="sm"
                                       onClick={() => removeModel(model.id)}
                                       className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
                                     >
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
                                         <path d="M3 6h18"></path>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
                                         <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -370,14 +412,14 @@ function UploadContent() {
                               ))}
                             </div>
                           )}
-                          
+
                           {models.length === 0 && (
                             <p className="text-sm text-muted-foreground text-center py-3">
                               尚未新增任何規格
                             </p>
                           )}
                         </div>
-                        
+
                         {manualImportType !== "single" && (
                           <div className="grid gap-1.5">
                             <Label htmlFor="price">價格</Label>
@@ -389,7 +431,9 @@ function UploadContent() {
                               onChange={(e) => validatePrice(e.target.value)}
                             />
                             {priceError && (
-                              <p className="text-sm text-red-500">{priceError}</p>
+                              <p className="text-sm text-red-500">
+                                {priceError}
+                              </p>
                             )}
                           </div>
                         )}
@@ -476,8 +520,8 @@ function UploadContent() {
                                 record.status === "成功"
                                   ? "bg-green-50 text-green-600"
                                   : record.status === "失敗"
-                                  ? "bg-red-50 text-red-600"
-                                  : "bg-yellow-50 text-yellow-600"
+                                    ? "bg-red-50 text-red-600"
+                                    : "bg-yellow-50 text-yellow-600"
                               }`}
                             >
                               {record.status}
@@ -501,23 +545,10 @@ function UploadContent() {
 // Main component that wraps the client component in a Suspense boundary
 export default function InventoryClient() {
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <React.Suspense fallback={<div className="p-4">Loading...</div>}>
-            <UploadContent />
-          </React.Suspense>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex flex-1 flex-col h-full w-full">
+      <React.Suspense fallback={<div className="p-4">Loading...</div>}>
+        <UploadContent />
+      </React.Suspense>
+    </div>
   );
 }

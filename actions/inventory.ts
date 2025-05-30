@@ -2,6 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import type { InventoryDashboardRow } from "@/lib/types";
+
+const DAYS_30 = 30;
+const REMAINING_INFINITY = 9999;
 
 export async function getInventoryStatus() {
   const cookieStore = cookies();
@@ -17,6 +21,34 @@ export async function getInventoryStatus() {
 
   if (error) throw error;
   return data;
+}
+
+export async function getInventoryDashboardData(): Promise<InventoryDashboardRow[]> {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from("inventory_dashboard")
+    .select("*");
+
+  if (error) throw error;
+
+  return data.map((r): InventoryDashboardRow => {
+    const avgDaily = r.sales_30d / DAYS_30;
+    const remaining_days =
+      avgDaily > 0 ? Math.floor(r.stock_quantity / avgDaily) : REMAINING_INFINITY;
+
+    return {
+      model_id: r.model_id,
+      model_name: r.model_name,
+      product_name: r.product_name,
+      stock_quantity: r.stock_quantity,
+      last_updated: r.last_updated,
+      supplier_name: r.supplier_name,
+      remaining_days,
+      is_ordered: r.has_recent_purchase,
+    };
+  });
 }
 
 export async function createInventoryMovement(

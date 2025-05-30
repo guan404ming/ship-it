@@ -47,7 +47,7 @@ bun run supabase migration new <name>
 bun run supabase migration list
 
 # Push migration
-bun run supabase migration up
+bun run supabase db push
 
 # Generate types
 bun run supabase gen types typescript --project-id <project-id> --schema public > database.types.ts

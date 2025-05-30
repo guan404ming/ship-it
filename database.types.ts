@@ -74,6 +74,13 @@ export type Database = {
             foreignKeyName: "order_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "inventory_dashboard"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["product_id"]
           },
@@ -156,6 +163,13 @@ export type Database = {
             foreignKeyName: "product_models_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "inventory_dashboard"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_models_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["product_id"]
           },
@@ -205,6 +219,13 @@ export type Database = {
           supplier_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_batches_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_dashboard"
+            referencedColumns: ["supplier_id"]
+          },
           {
             foreignKeyName: "purchase_batches_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -305,7 +326,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      inventory_dashboard: {
+        Row: {
+          has_recent_purchase: boolean | null
+          last_updated: string | null
+          model_id: number | null
+          model_name: string | null
+          product_id: number | null
+          product_name: string | null
+          sales_30d: number | null
+          stock_quantity: number | null
+          supplier_id: number | null
+          supplier_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_records_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: true
+            referencedRelation: "product_models"
+            referencedColumns: ["model_id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

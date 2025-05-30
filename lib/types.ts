@@ -26,6 +26,17 @@ export type StockRecordWithModel = StockRecord & ProductModel & Product & {
   is_ordered?: boolean;
 };
 
+export type InventoryDashboardRow = {
+  model_id: number;
+  model_name: string;
+  product_name: string;
+  stock_quantity: number;
+  last_updated: string;
+  supplier_name: string;
+  remaining_days: number;
+  is_ordered: boolean;
+};
+
 // 用於我的叫貨
 export type MyInventory = Supplier & Product & ProductModel & PurchaseItem & PurchaseBatch;
 

@@ -1,6 +1,10 @@
 "use client";
 
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { LoginForm } from "@/components/login-form";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { useSession } from "next-auth/react";
 
 export default function PagesLayout({
@@ -24,6 +28,21 @@ export default function PagesLayout({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center">{children}</div>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-col items-center justify-center h-screen">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

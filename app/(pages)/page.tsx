@@ -1,5 +1,5 @@
 import { getInventoryDashboardData } from "@/actions/inventory";
-import { InventoryClient } from "./client";
+import { InventoryClient } from "./_components/inventory/client";
 
 export default async function InventoryPage() {
   const inventory = await getInventoryDashboardData();

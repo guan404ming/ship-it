@@ -6,7 +6,12 @@ import { cookies } from "next/headers";
 export async function createPurchaseBatch(
   supplierId: number,
   orderDate?: string,
-  expectedDeliveryDate?: string
+  expectedDeliveryDate?: string,
+  items?: {
+    model_id: number;
+    quantity: number;
+    unit_cost: number;
+  }[]
 ) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
@@ -24,6 +29,16 @@ export async function createPurchaseBatch(
     .select()
     .single();
 
+  if (items) {
+    await supabase.from("purchase_items").insert(
+      items.map((item) => ({
+        batch_id: data.batch_id,
+        model_id: item.model_id,
+        quantity: item.quantity,
+        unit_cost: item.unit_cost,
+      }))
+    );
+  }
   if (error) throw error;
   return data;
 }

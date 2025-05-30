@@ -536,8 +536,14 @@ export function PurchaseImportDialog({
       const batch = await createPurchaseBatch(
         supplierId,
         orderDate,
-        expectedDeliveryDate
+        expectedDeliveryDate,
+        orderItems.map((item) => ({
+          model_id: item.models[0].id,
+          quantity: item.quantity,
+          unit_cost: 0,
+        }))
       );
+
       if (!batch || !batch.id) {
         toast.error("建立叫貨批次失敗");
         return;

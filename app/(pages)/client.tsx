@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { BoxIcon, FileUp, PackageIcon, Search, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  BoxIcon,
+  FileUp,
+  PackageIcon,
+  Search,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -19,30 +26,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group";
-import { StockRecordWithModel } from "@/lib/types";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { InventoryDashboardRow } from "@/lib/types";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 
 interface InventoryClientProps {
-  initialInventory: StockRecordWithModel[];
+  initialInventory: InventoryDashboardRow[];
 }
 
 export function InventoryClient({ initialInventory }: InventoryClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState<string>("");
-  const [stockStatusFilter, setStockStatusFilter] = React.useState<string>("所有狀態");
-  const [orderStatusFilter, setOrderStatusFilter] = React.useState<string>("所有狀態");
+  const [stockStatusFilter, setStockStatusFilter] =
+    React.useState<string>("所有狀態");
+  const [orderStatusFilter, setOrderStatusFilter] =
+    React.useState<string>("所有狀態");
   const [sortConfig, setSortConfig] = React.useState<{
-    key: keyof StockRecordWithModel | null;
+    key: keyof InventoryDashboardRow | null;
     direction: "ascending" | "descending" | null;
   }>({
     key: null,
     direction: null,
   });
-  const [selectedItems, setSelectedItems] = React.useState<Set<number>>(new Set());
+  const [selectedItems, setSelectedItems] = React.useState<Set<string>>(
+    new Set()
+  );
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
 
   const handleInventoryImport = () => {
@@ -70,7 +78,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     setOrderStatusFilter("所有狀態");
   };
 
-  const requestSort = (key: keyof StockRecordWithModel) => {
+  const requestSort = (key: keyof InventoryDashboardRow) => {
     let direction: "ascending" | "descending" | null = "ascending";
 
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
@@ -86,11 +94,12 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
   };
 
   const filteredAndSortedData = React.useMemo(() => {
-    let filteredData = [...initialInventory].map(item => ({
+    let filteredData = [...initialInventory].map((item) => ({
       ...item,
-      supplier_name: item.supplier_name || "廠商" + (item.model_id % 5 + 1),
+      supplier_name: item.supplier_name || "廠商" + ((item.model_id % 5) + 1),
       remaining_days: item.remaining_days || Math.floor(Math.random() * 20) + 1,
-      is_ordered: item.is_ordered !== undefined ? item.is_ordered : Math.random() > 0.5
+      is_ordered:
+        item.is_ordered !== undefined ? item.is_ordered : Math.random() > 0.5,
     }));
 
     if (searchQuery) {
@@ -102,16 +111,15 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
           item.product_name
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          item.model_name
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          item.model_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     if (stockStatusFilter !== "所有狀態") {
       filteredData = filteredData.filter((item) => {
         if (stockStatusFilter === "警告") return (item.remaining_days ?? 0) < 7;
-        if (stockStatusFilter === "充足") return (item.remaining_days ?? 0) >= 7;
+        if (stockStatusFilter === "充足")
+          return (item.remaining_days ?? 0) >= 7;
         return true;
       });
     }
@@ -126,8 +134,8 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
     if (sortConfig.key && sortConfig.direction) {
       filteredData.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof StockRecordWithModel];
-        const bValue = b[sortConfig.key as keyof StockRecordWithModel];
+        const aValue = a[sortConfig.key as keyof InventoryDashboardRow];
+        const bValue = b[sortConfig.key as keyof InventoryDashboardRow];
 
         if (aValue !== undefined && bValue !== undefined) {
           const aCompare = aValue ?? 0;
@@ -144,11 +152,17 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     }
 
     return filteredData;
-  }, [searchQuery, stockStatusFilter, orderStatusFilter, sortConfig, initialInventory]);
+  }, [
+    searchQuery,
+    stockStatusFilter,
+    orderStatusFilter,
+    sortConfig,
+    initialInventory,
+  ]);
 
   // Handle item selection
-  const toggleItemSelection = (modelId: number) => {
-    setSelectedItems(prevSelected => {
+  const toggleItemSelection = (modelId: string) => {
+    setSelectedItems((prevSelected) => {
       const newSelected = new Set(prevSelected);
       if (newSelected.has(modelId)) {
         newSelected.delete(modelId);
@@ -166,14 +180,18 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
       setSelectedItems(new Set());
     } else {
       // Otherwise select all filtered items
-      const allModelIds = filteredAndSortedData.map(item => item.model_id);
+      const allModelIds = filteredAndSortedData.map(
+        (item) => `${item.supplier_name}-${item.model_id}`
+      );
       setSelectedItems(new Set(allModelIds));
     }
   };
 
   // Get selected items data
   const getSelectedItemsData = () => {
-    return filteredAndSortedData.filter(item => selectedItems.has(item.model_id));
+    return filteredAndSortedData.filter((item) =>
+      selectedItems.has(`${item.supplier_name}-${item.model_id}`)
+    );
   };
 
   // Handle bulk delete
@@ -265,7 +283,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full max-w-sm h-10"
                   />
-                  
+
                   {/* 當有選擇項目時顯示的操作按鈕 */}
                   {selectedItems.size > 0 && (
                     <div className="flex gap-2 ml-4">
@@ -305,31 +323,35 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                   )}
 
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground px-1">庫存狀態</span>
+                    <span className="text-xs text-muted-foreground px-1">
+                      庫存狀態
+                    </span>
                     <ToggleGroup
                       type="single"
                       variant="outline"
                       value={stockStatusFilter}
-                      onValueChange={(value) => setStockStatusFilter(value || "所有狀態")}
+                      onValueChange={(value) =>
+                        setStockStatusFilter(value || "所有狀態")
+                      }
                       className="justify-start"
                     >
-                      <ToggleGroupItem 
+                      <ToggleGroupItem
                         value="充足"
                         size="sm"
                         className={
-                          stockStatusFilter === "充足" 
-                            ? "bg-gray-50 text-gray-600 border-gray-200" 
+                          stockStatusFilter === "充足"
+                            ? "bg-gray-50 text-gray-600 border-gray-200"
                             : ""
                         }
                       >
                         充足
                       </ToggleGroupItem>
-                      <ToggleGroupItem 
+                      <ToggleGroupItem
                         value="警告"
                         size="sm"
                         className={
-                          stockStatusFilter === "警告" 
-                            ? "bg-gray-50 text-gray-600 border-gray-200"  
+                          stockStatusFilter === "警告"
+                            ? "bg-gray-50 text-gray-600 border-gray-200"
                             : ""
                         }
                       >
@@ -339,31 +361,35 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground px-1">叫貨狀態</span>
+                    <span className="text-xs text-muted-foreground px-1">
+                      叫貨狀態
+                    </span>
                     <ToggleGroup
                       type="single"
                       variant="outline"
                       value={orderStatusFilter}
-                      onValueChange={(value) => setOrderStatusFilter(value || "所有狀態")}
+                      onValueChange={(value) =>
+                        setOrderStatusFilter(value || "所有狀態")
+                      }
                       className="justify-start"
                     >
-                      <ToggleGroupItem 
+                      <ToggleGroupItem
                         value="已叫貨"
                         size="sm"
                         className={
-                          orderStatusFilter === "已叫貨" 
-                            ? "bg-gray-50 text-gray-600 border-gray-200" 
+                          orderStatusFilter === "已叫貨"
+                            ? "bg-gray-50 text-gray-600 border-gray-200"
                             : ""
                         }
                       >
                         已叫貨
                       </ToggleGroupItem>
-                      <ToggleGroupItem 
+                      <ToggleGroupItem
                         value="未叫貨"
                         size="sm"
                         className={
-                          orderStatusFilter === "未叫貨" 
-                            ? "bg-gray-50 text-gray-600 border-gray-200" 
+                          orderStatusFilter === "未叫貨"
+                            ? "bg-gray-50 text-gray-600 border-gray-200"
                             : ""
                         }
                       >
@@ -371,8 +397,6 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                       </ToggleGroupItem>
                     </ToggleGroup>
                   </div>
-                  
-
                 </div>
               </div>
 
@@ -383,10 +407,11 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">
-                          <Checkbox 
+                          <Checkbox
                             checked={
-                              filteredAndSortedData.length > 0 && 
-                              selectedItems.size === filteredAndSortedData.length
+                              filteredAndSortedData.length > 0 &&
+                              selectedItems.size ===
+                                filteredAndSortedData.length
                             }
                             onCheckedChange={toggleSelectAll}
                             aria-label="全選"
@@ -428,22 +453,24 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                     </TableHeader>
                     <TableBody>
                       {filteredAndSortedData.map((item) => (
-                        <TableRow key={item.model_id}>
+                        <TableRow
+                          key={`${item.supplier_name}-${item.model_id}`}
+                        >
                           <TableCell>
-                            <Checkbox 
-                              checked={selectedItems.has(item.model_id)}
-                              onCheckedChange={() => toggleItemSelection(item.model_id)}
+                            <Checkbox
+                              checked={selectedItems.has(
+                                `${item.supplier_name}-${item.model_id}`
+                              )}
+                              onCheckedChange={() =>
+                                toggleItemSelection(
+                                  `${item.supplier_name}-${item.model_id}`
+                                )
+                              }
                             />
                           </TableCell>
-                          <TableCell>
-                            {item.supplier_name ?? "-"}
-                          </TableCell>
-                          <TableCell>
-                            {item.product_name ?? "-"}
-                          </TableCell>
-                          <TableCell>
-                            {item.model_name ?? "-"}
-                          </TableCell>
+                          <TableCell>{item.supplier_name ?? "-"}</TableCell>
+                          <TableCell>{item.product_name ?? "-"}</TableCell>
+                          <TableCell>{item.model_name ?? "-"}</TableCell>
                           <TableCell
                             className={`text-right font-mono ${
                               (item.stock_quantity ?? 0) < 10
@@ -496,7 +523,8 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                                   ? "bg-gray-50 text-gray-600 hover:bg-gray-100"
                                   : "text-white bg-slate-500 hover:bg-slate-600"
                               } ${
-                                orderStatusFilter === (item.is_ordered ? "已叫貨" : "未叫貨")
+                                orderStatusFilter ===
+                                (item.is_ordered ? "已叫貨" : "未叫貨")
                                   ? "ring-2 ring-offset-1"
                                   : ""
                               }`}
@@ -520,15 +548,20 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
                   </Table>
                 </div>
               </div>
-              
+
               {/* 備註說明區塊 */}
               <div className="px-4 lg:px-6 mt-6 mb-8">
                 <div className="rounded-lg border p-4">
                   <h3 className="text-sm font-medium mb-2">庫存狀態說明</h3>
                   <ul className="text-sm space-y-1">
-                    <li>• 剩餘天數的計算方式為目前的庫存量除以過去 30 天的日均銷售量 </li>
+                    <li>
+                      • 剩餘天數的計算方式為目前的庫存量除以過去 30
+                      天的日均銷售量{" "}
+                    </li>
                     <li>• 剩餘天數小於 7 天的商品將被標記為「警告」狀態</li>
-                    <li>• 剩餘天數大於或等於 7 天的商品將被標記為「充足」狀態</li>
+                    <li>
+                      • 剩餘天數大於或等於 7 天的商品將被標記為「充足」狀態
+                    </li>
                     <li>• 低庫存項目的統計基於剩餘天數小於 7 天的商品數量</li>
                   </ul>
                 </div>
@@ -537,7 +570,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
           </div>
         </div>
       </SidebarInset>
-      
+
       {/* 一鍵叫貨對話框 */}
       <PurchaseImportDialog
         open={isDialogOpen}

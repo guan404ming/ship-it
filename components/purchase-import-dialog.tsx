@@ -12,7 +12,7 @@ import { NumberInput } from "@/components/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { createPurchaseBatch, addPurchaseItem } from "@/actions/purchase";
 import { getSuppliers, type Supplier } from "@/actions/suppliers";
-import { StockRecordWithModel } from "@/lib/types";
+import { InventoryDashboardRow } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +53,7 @@ interface PurchaseImportDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  selectedItems?: StockRecordWithModel[];
+  selectedItems?: InventoryDashboardRow[];
 }
 
 type ModelRowProps = {
@@ -315,10 +315,10 @@ export function PurchaseImportDialog({
       processedRef.current = true;
 
       // Group items by product to group same products with different models
-      const groupedByProduct: Record<string, StockRecordWithModel[]> = {};
+      const groupedByProduct: Record<string, InventoryDashboardRow[]> = {};
 
       items.forEach((item) => {
-        const productId = item.product_id?.toString() || "";
+        const productId = `${item.supplier_name}-${item.model_id}`;
         if (!groupedByProduct[productId]) {
           groupedByProduct[productId] = [];
         }

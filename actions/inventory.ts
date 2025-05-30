@@ -7,23 +7,9 @@ import type { InventoryDashboardRow } from "@/lib/types";
 const DAYS_30 = 30;
 const REMAINING_INFINITY = 9999;
 
-export async function getInventoryStatus() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-
-  const { data, error } = await supabase.from("stock_records").select(`
-      *,
-      product_models (
-        *,
-        products (*)
-      )
-    `);
-
-  if (error) throw error;
-  return data;
-}
-
-export async function getInventoryDashboardData(): Promise<InventoryDashboardRow[]> {
+export async function getInventoryDashboardData(): Promise<
+  InventoryDashboardRow[]
+> {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -36,7 +22,9 @@ export async function getInventoryDashboardData(): Promise<InventoryDashboardRow
   return data.map((r): InventoryDashboardRow => {
     const avgDaily = r.sales_30d / DAYS_30;
     const remaining_days =
-      avgDaily > 0 ? Math.floor(r.stock_quantity / avgDaily) : REMAINING_INFINITY;
+      avgDaily > 0
+        ? Math.floor(r.stock_quantity / avgDaily)
+        : REMAINING_INFINITY;
 
     return {
       model_id: r.model_id,
@@ -107,5 +95,34 @@ export async function getInventoryMovements() {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
+  return data;
+}
+
+export async function removeInventoryDashboardData({
+  inventoryDashboardData,
+}: {
+  inventoryDashboardData: { supplierName: string; modelId: number }[];
+}) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from("inventory_dashboard")
+    .delete()
+    .in(
+      "supplier_name",
+      inventoryDashboardData.map((item) => item.supplierName)
+    )
+    .in(
+      "model_id",
+      inventoryDashboardData.map((item) => item.modelId)
+    )
+    .select();
+
+  if (error) {
+    console.error("Error removing inventory dashboard data:", error);
+    throw error;
+  }
+
   return data;
 }

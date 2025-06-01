@@ -1,12 +1,6 @@
-// Buffett May. 26
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/database.types";
+import { createClient } from "@/lib/supabase/server";
 import { GroupedProductSales, SalesData } from "@/lib/types";
-
-const db = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { cookies } from "next/headers";
 
 type OrderWithItems = {
   created_at: string | null;
@@ -20,8 +14,10 @@ export async function getProductSalesStats(
   startDate: string,
   endDate: string
 ): Promise<SalesData[]> {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
   try {
-    const { data: stats, error } = await db
+    const { data: stats, error } = await supabase
       .from("orders")
       .select(
         `
@@ -92,11 +88,14 @@ export async function getProductStats(
   startDate: string,
   endDate: string
 ): Promise<GroupedProductSales[]> {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
   try {
     const [products, models, orders] = await Promise.all([
-      db.from("products").select("*"),
-      db.from("product_models").select("*"),
-      db
+      supabase.from("products").select("*"),
+      supabase.from("product_models").select("*"),
+      supabase
         .from("orders")
         .select(
           `created_at, order_items (product_id, model_id, quantity, total_price)`

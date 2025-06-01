@@ -78,14 +78,22 @@ export interface SalesData {
   amount: number;
   quantity: number;
 }
+
 // 用於歷史數據 -> 銷售表現
-export type RankingProduct = Product &
-  ProductModel & {
-    sales: number;
-    quantity: number;
-    growth?: number;
-    returns?: number;
-  };
+export type RankingProduct = {
+  product_id: number;
+  product_name: string;
+  listed_date: string;
+  status: string;
+  model_id: number;
+  model_name: string;
+  original_price: number;
+  promo_price: number | null;
+  created_at: string;
+  sales: number;
+  quantity: number;
+  growth?: number;
+};
 
 // 用於歷史數據 -> 各項商品表現
 export type ProductSalesModel = ProductModel & {

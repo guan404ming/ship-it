@@ -14,28 +14,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ModelItem } from "@/lib/types";
 import { purchaseOrderData } from "@/lib/data/purchase-data";
 
 interface PurchaseEditDialogProps {
   purchaseId: string;
 }
 
+// Local interface for model items in the edit dialog
+interface LocalModelItem {
+  id: number;
+  name: string;
+  quantity: number;
+}
+
 // Interface for our form data
 interface PurchaseFormData {
-  id: string;
+  item_id: number;
   supplier_name: string;
   product_name: string;
   model_name: string;
   quantity: number;
   unit_cost: number;
   created_at: string;
-  expected_arrival: string;
+  expect_date: string;
   note?: string;
-  models: ModelItem[];
+  models: LocalModelItem[];
   // Keep these fields in the data structure but don't display them
-  batch_id?: string;
-  category_name?: string;
+  batch_id?: number;
 }
 
 export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
@@ -48,17 +53,25 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
     if (open && purchaseId) {
       // In a real application, this would be an API call
       // For now, we'll use mock data
-      const purchaseItem = purchaseOrderData.find(item => item.id === purchaseId);
+      const purchaseItem = purchaseOrderData.find(item => item.item_id.toString() === purchaseId);
       
       if (purchaseItem) {
         setFormData({
-          ...purchaseItem,
+          item_id: purchaseItem.item_id,
+          supplier_name: purchaseItem.supplier_name || "",
+          product_name: purchaseItem.product_name || "",
+          model_name: purchaseItem.model_name || "",
+          quantity: purchaseItem.quantity || 0,
           unit_cost: typeof purchaseItem.unit_cost === 'number' ? purchaseItem.unit_cost : 0,
+          created_at: purchaseItem.created_at || "",
+          expect_date: purchaseItem.expect_date || "",
+          note: purchaseItem.note || "",
+          batch_id: purchaseItem.batch_id,
           models: [
             {
               id: 1,
-              name: purchaseItem.model_name,
-              quantity: purchaseItem.quantity
+              name: purchaseItem.model_name || "",
+              quantity: purchaseItem.quantity || 0
             }
           ]
         });
@@ -204,8 +217,8 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
                 <label className="text-sm font-medium">預計到貨日</label>
                 <Input 
                   type="date"
-                  value={formData.expected_arrival}
-                  onChange={(e) => handleChange('expected_arrival', e.target.value)}
+                  value={formData.expect_date}
+                  onChange={(e) => handleChange('expect_date', e.target.value)}
                 />
               </div>
             </div>

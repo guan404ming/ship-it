@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { getDateRange as getDateRangeUtil, calculateGrowthRate } from "@/lib/date-utils"
 
 import { RankingProduct } from "@/lib/types"
 
@@ -15,52 +14,15 @@ interface SalesRankingProps {
   productRankingData: RankingProduct[]
 }
 
-/**
- * 計算商品在兩個時間段的銷售和數量總和
- */
-function calculatePeriodTotals(
-  products: RankingProduct[], 
-  key: string,  // 唯一商品鍵
-  currentPeriodStart: Date, 
-  currentPeriodEnd: Date,
-  previousPeriodStart: Date,
-  previousPeriodEnd: Date
-): {
-  currentSales: number,
-  previousSales: number,
-  currentQuantity: number,
-  previousQuantity: number
-} {
-  // 篩選當前期間商品
-  const currentProducts = products.filter(p => {
-    if (!p.date) return false;
-    const date = new Date(p.date);
-    return date >= currentPeriodStart && date <= currentPeriodEnd &&
-           `${p.sku}-${p.product_name}-${p.category_name}` === key;
-  });
-  
-  // 篩選前一期間商品
-  const previousProducts = products.filter(p => {
-    if (!p.date) return false;
-    const date = new Date(p.date);
-    return date >= previousPeriodStart && date <= previousPeriodEnd &&
-           `${p.sku}-${p.product_name}-${p.category_name}` === key;
-  });
-  
-  // 計算當前期間總和
-  const currentSales = currentProducts.reduce((sum, product) => sum + product.sales, 0);
-  const currentQuantity = currentProducts.reduce((sum, product) => sum + (product.quantity || 0), 0);
-  
-  // 計算前一期間總和
-  const previousSales = previousProducts.reduce((sum, product) => sum + product.sales, 0);
-  const previousQuantity = previousProducts.reduce((sum, product) => sum + (product.quantity || 0), 0);
-  
-  return {
-    currentSales,
-    previousSales,
-    currentQuantity,
-    previousQuantity
-  };
+interface AggregatedProduct {
+  id: string;
+  product_id: number;
+  product_name: string;
+  model_name: string;
+  sales: number;
+  quantity: number;
+  growth?: number;
+  specifications: number;
 }
 
 export function SalesRankings({ productRankingData }: SalesRankingProps) {
@@ -68,182 +30,74 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
   const [rankingMetric, setRankingMetric] = React.useState<"sales" | "quantity">("sales")
   const [customDateRange, setCustomDateRange] = React.useState<{start: string, end: string} | null>(null)
 
-  // 計算日期範圍
-  const getDateRange = React.useCallback(() => {
-    const now = new Date("2025-05-01");
-    return getDateRangeUtil(timeRange, customDateRange, now);
-  }, [timeRange, customDateRange]);
+  // 聚合相同產品的不同型號
+  const aggregatedData = React.useMemo(() => {
+    const aggregatedMap = new Map<string, AggregatedProduct>();
 
-  // 計算比較期間
-  const getComparisonPeriods = React.useCallback(() => {
-    const now = new Date("2025-05-01");
-    
-    // 獲取基本天數
-    let days = timeRange === "7d" ? 7 : 
-               timeRange === "30d" ? 30 : 
-               timeRange === "90d" ? 90 : 
-               timeRange === "180d" ? 180 : 
-               timeRange === "all" ? 365 * 2 : 90;
-    
-    // 如果是自定義區間，計算天數
-    if (timeRange === "custom" && customDateRange) {
-      const start = new Date(customDateRange.start);
-      const end = new Date(customDateRange.end);
-      days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    }
-    
-    // 當前區間
-    const currentPeriodStart = new Date(now);
-    currentPeriodStart.setDate(currentPeriodStart.getDate() - days);
-    const currentPeriodEnd = new Date(now);
-    
-    // 前一個區間
-    const previousPeriodEnd = new Date(currentPeriodStart);
-    previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 1);
-    const previousPeriodStart = new Date(previousPeriodEnd);
-    previousPeriodStart.setDate(previousPeriodStart.getDate() - days);
-    
-    return {
-      currentPeriodStart,
-      currentPeriodEnd,
-      previousPeriodStart,
-      previousPeriodEnd
-    };
-  }, [timeRange, customDateRange]);
-
-  // 過濾數據並按商品聚合
-  const filteredAndAggregatedData = React.useMemo(() => {
-    const { startDate, endDate } = getDateRange();
-    const {
-      currentPeriodStart,
-      currentPeriodEnd,
-      previousPeriodStart,
-      previousPeriodEnd
-    } = getComparisonPeriods();
-    
-    // 依日期篩選數據
-    const filteredData = productRankingData.filter(product => {
-      if (!product.date) return true; // 包含沒有日期的商品
-      const productDate = new Date(product.date);
-      return productDate >= startDate && productDate <= endDate;
-    });
-
-    // 按商品聚合
-    const aggregatedMap = new Map<string, {
-      id: string,
-      sku: string,
-      product_name: string,
-      category_name: string,
-      sales: number,
-      quantity: number,
-      salesGrowth?: number,
-      quantityGrowth?: number,
-      specifications: number
-    }>();
-
-    filteredData.forEach(product => {
-      // 創建唯一鍵，忽略規格
-      const key = `${product.sku}-${product.product_name}-${product.category_name}`;
+    productRankingData.forEach(product => {
+      // 使用 product_name 作為聚合鍵，如果為 null 則跳過
+      if (!product.product_name) return;
       
-      // 計算兩個時間段的總和
-      const totals = calculatePeriodTotals(
-        productRankingData,
-        key,
-        currentPeriodStart,
-        currentPeriodEnd,
-        previousPeriodStart,
-        previousPeriodEnd
-      );
-      
-      // 計算成長率
-      const salesGrowth = calculateGrowthRate(totals.currentSales, totals.previousSales);
-      const quantityGrowth = calculateGrowthRate(totals.currentQuantity, totals.previousQuantity);
+      const key = product.product_name;
       
       if (aggregatedMap.has(key)) {
         const existing = aggregatedMap.get(key)!;
         aggregatedMap.set(key, {
           ...existing,
           sales: existing.sales + product.sales,
-          quantity: existing.quantity + (product.quantity || 0),
+          quantity: existing.quantity + product.quantity,
           specifications: existing.specifications + 1,
-          salesGrowth,
-          quantityGrowth
+          // 保持最高的成長率
+          growth: Math.max(existing.growth || 0, product.growth || 0)
         });
       } else {
         aggregatedMap.set(key, {
-          id: key,
-          sku: product.sku,
+          id: `${product.product_id}-${product.product_name}`,
+          product_id: product.product_id,
           product_name: product.product_name,
-          category_name: product.category_name,
+          model_name: product.model_name || "未知型號",
           sales: product.sales,
-          quantity: product.quantity || 0,
-          specifications: 1,
-          salesGrowth,
-          quantityGrowth
+          quantity: product.quantity,
+          growth: product.growth,
+          specifications: 1
         });
       }
     });
 
     return Array.from(aggregatedMap.values());
-  }, [productRankingData, getDateRange, getComparisonPeriods]);
+  }, [productRankingData]);
 
   // 依選擇的指標排序
   const topSalesList = React.useMemo(() => {
-    return [...filteredAndAggregatedData]
+    return [...aggregatedData]
       .sort((a, b) => rankingMetric === 'sales' 
         ? b.sales - a.sales 
         : b.quantity - a.quantity)
       .slice(0, 5);
-  }, [filteredAndAggregatedData, rankingMetric]);
+  }, [aggregatedData, rankingMetric]);
   
   const bottomSalesList = React.useMemo(() => {
-    return [...filteredAndAggregatedData]
+    return [...aggregatedData]
       .sort((a, b) => rankingMetric === 'sales' 
         ? a.sales - b.sales 
         : a.quantity - b.quantity)
       .slice(0, 5);
-  }, [filteredAndAggregatedData, rankingMetric]);
+  }, [aggregatedData, rankingMetric]);
   
   // 依成長率排序
   const topGrowthList = React.useMemo(() => {
-    return [...filteredAndAggregatedData]
-      .filter(product => {
-        const growth = rankingMetric === 'sales' 
-          ? product.salesGrowth 
-          : product.quantityGrowth;
-        return growth !== undefined;
-      })
-      .sort((a, b) => {
-        const growthA = rankingMetric === 'sales' 
-          ? a.salesGrowth || 0 
-          : a.quantityGrowth || 0;
-        const growthB = rankingMetric === 'sales' 
-          ? b.salesGrowth || 0 
-          : b.quantityGrowth || 0;
-        return growthB - growthA;
-      })
+    return [...aggregatedData]
+      .filter(product => product.growth !== undefined && product.growth !== null)
+      .sort((a, b) => (b.growth || 0) - (a.growth || 0))
       .slice(0, 5);
-  }, [filteredAndAggregatedData, rankingMetric]);
+  }, [aggregatedData]);
   
   const bottomGrowthList = React.useMemo(() => {
-    return [...filteredAndAggregatedData]
-      .filter(product => {
-        const growth = rankingMetric === 'sales' 
-          ? product.salesGrowth 
-          : product.quantityGrowth;
-        return growth !== undefined;
-      })
-      .sort((a, b) => {
-        const growthA = rankingMetric === 'sales' 
-          ? a.salesGrowth || 0 
-          : a.quantityGrowth || 0;
-        const growthB = rankingMetric === 'sales' 
-          ? b.salesGrowth || 0 
-          : b.quantityGrowth || 0;
-        return growthA - growthB;
-      })
+    return [...aggregatedData]
+      .filter(product => product.growth !== undefined && product.growth !== null)
+      .sort((a, b) => (a.growth || 0) - (b.growth || 0))
       .slice(0, 5);
-  }, [filteredAndAggregatedData, rankingMetric]);
+  }, [aggregatedData]);
 
   return (
     <>
@@ -251,7 +105,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center mb-6">
         <div className="flex flex-1 items-center">
           <div className="flex items-center gap-2">
-            <Select value={timeRange} onValueChange={(value) => {
+            <Select value={timeRange} onValueChange={(value: string) => {
               setTimeRange(value);
               if (value !== "custom") {
                 setCustomDateRange(null);
@@ -330,39 +184,33 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商名稱</TableHead>
-              <TableHead>商品</TableHead>
-              <TableHead>商品分類</TableHead>
+              <TableHead>商品ID</TableHead>
+              <TableHead>商品名稱</TableHead>
+              <TableHead>型號</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
             </TableRow></TableHeader><TableBody>
-              {topSalesList.map((product) => {
-                const growth = rankingMetric === "sales" 
-                  ? product.salesGrowth 
-                  : product.quantityGrowth;
-                
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>{product.product_name}</TableCell>
-                    <TableCell>{product.category_name}</TableCell>
-                    <TableCell>{product.specifications}</TableCell>
-                    <TableCell>
-                      {rankingMetric === "sales" 
-                        ? `$${product.sales.toLocaleString()}` 
-                        : product.quantity.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      {growth !== undefined && (
-                        <span className={growth >= 0 ? "text-green-600" : "text-red-600"}>
-                          {growth >= 0 ? "↑" : "↓"} {Math.abs(growth)}%
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {topSalesList.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>{product.product_id}</TableCell>
+                  <TableCell>{product.product_name}</TableCell>
+                  <TableCell>{product.model_name}</TableCell>
+                  <TableCell>{product.specifications}</TableCell>
+                  <TableCell>
+                    {rankingMetric === "sales" 
+                      ? `$${product.sales.toLocaleString()}` 
+                      : product.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    {product.growth !== undefined && product.growth !== null && (
+                      <span className={product.growth >= 0 ? "text-green-600" : "text-red-600"}>
+                        {product.growth >= 0 ? "↑" : "↓"} {Math.abs(product.growth)}%
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody></Table>
           </CardContent>
         </Card>
@@ -373,39 +221,33 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商名稱</TableHead>
-              <TableHead>品名</TableHead>
-              <TableHead>商品分類</TableHead>
+              <TableHead>商品ID</TableHead>
+              <TableHead>商品名稱</TableHead>
+              <TableHead>型號</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
             </TableRow></TableHeader><TableBody>
-              {bottomSalesList.map((product) => {
-                const growth = rankingMetric === "sales" 
-                  ? product.salesGrowth 
-                  : product.quantityGrowth;
-                
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>{product.product_name}</TableCell>
-                    <TableCell>{product.category_name}</TableCell>
-                    <TableCell>{product.specifications}</TableCell>
-                    <TableCell>
-                      {rankingMetric === "sales" 
-                        ? `$${product.sales.toLocaleString()}` 
-                        : product.quantity.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      {growth !== undefined && (
-                        <span className={growth >= 0 ? "text-green-600" : "text-red-600"}>
-                          {growth >= 0 ? "↑" : "↓"} {Math.abs(growth)}%
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {bottomSalesList.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>{product.product_id}</TableCell>
+                  <TableCell>{product.product_name}</TableCell>
+                  <TableCell>{product.model_name}</TableCell>
+                  <TableCell>{product.specifications}</TableCell>
+                  <TableCell>
+                    {rankingMetric === "sales" 
+                      ? `$${product.sales.toLocaleString()}` 
+                      : product.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    {product.growth !== undefined && product.growth !== null && (
+                      <span className={product.growth >= 0 ? "text-green-600" : "text-red-600"}>
+                        {product.growth >= 0 ? "↑" : "↓"} {Math.abs(product.growth)}%
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody></Table>
           </CardContent>
         </Card>
@@ -416,35 +258,29 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商名稱</TableHead>
-              <TableHead>品名</TableHead>
-              <TableHead>商品分類</TableHead>
+              <TableHead>商品ID</TableHead>
+              <TableHead>商品名稱</TableHead>
+              <TableHead>型號</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
             </TableRow></TableHeader><TableBody>
-              {topGrowthList.map((product) => {
-                const growth = rankingMetric === "sales" 
-                  ? product.salesGrowth 
-                  : product.quantityGrowth;
-                
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>{product.product_name}</TableCell>
-                    <TableCell>{product.category_name}</TableCell>
-                    <TableCell>{product.specifications}</TableCell>
-                    <TableCell>
-                      {rankingMetric === "sales" 
-                        ? `$${product.sales.toLocaleString()}` 
-                        : product.quantity.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-green-600">
-                      ↑ {Math.abs(growth || 0)}%
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {topGrowthList.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>{product.product_id}</TableCell>
+                  <TableCell>{product.product_name}</TableCell>
+                  <TableCell>{product.model_name}</TableCell>
+                  <TableCell>{product.specifications}</TableCell>
+                  <TableCell>
+                    {rankingMetric === "sales" 
+                      ? `$${product.sales.toLocaleString()}` 
+                      : product.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-green-600">
+                    ↑ {Math.abs(product.growth || 0)}%
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody></Table>
           </CardContent>
         </Card>
@@ -455,35 +291,29 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
           </CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow>
-              <TableHead>廠商名稱</TableHead>
-              <TableHead>品名</TableHead>
-              <TableHead>商品分類</TableHead>
+              <TableHead>商品ID</TableHead>
+              <TableHead>商品名稱</TableHead>
+              <TableHead>型號</TableHead>
               <TableHead>規格數</TableHead>
               <TableHead>{rankingMetric === "sales" ? "銷售額" : "銷售量"}</TableHead>
               <TableHead>成長率</TableHead>
             </TableRow></TableHeader><TableBody>
-              {bottomGrowthList.map((product) => {
-                const growth = rankingMetric === "sales" 
-                  ? product.salesGrowth 
-                  : product.quantityGrowth;
-                
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>{product.product_name}</TableCell>
-                    <TableCell>{product.category_name}</TableCell>
-                    <TableCell>{product.specifications}</TableCell>
-                    <TableCell>
-                      {rankingMetric === "sales" 
-                        ? `$${product.sales.toLocaleString()}` 
-                        : product.quantity.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-red-600">
-                      ↓ {Math.abs(growth || 0)}%
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {bottomGrowthList.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>{product.product_id}</TableCell>
+                  <TableCell>{product.product_name}</TableCell>
+                  <TableCell>{product.model_name}</TableCell>
+                  <TableCell>{product.specifications}</TableCell>
+                  <TableCell>
+                    {rankingMetric === "sales" 
+                      ? `$${product.sales.toLocaleString()}` 
+                      : product.quantity.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-red-600">
+                    ↓ {Math.abs(product.growth || 0)}%
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody></Table>
           </CardContent>
         </Card>

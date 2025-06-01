@@ -26,10 +26,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
-// TODO: 前端需要從後端獲取叫貨資料，目前使用假資料
-import { purchaseOrderData } from "@/lib/data/purchase-data";
+import { PurchaseDashboardRow } from "@/lib/types";
 
-export default function PurchaseTempClient() {
+interface PurchaseTempClientProps {
+  initialPurchase: PurchaseDashboardRow[];
+}
+
+export default function PurchaseClient({ initialPurchase }: PurchaseTempClientProps) {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedRows, setSelectedRows] = React.useState<
@@ -46,15 +49,15 @@ export default function PurchaseTempClient() {
     setIsDialogOpen(true);
   };
 
-  const totalOrders = new Set(purchaseOrderData.map((item) => item.batch_id))
-    .size;
-  const totalItems = purchaseOrderData.length;
+  const totalOrders = new Set(initialPurchase.map((item) => item.batch_id)).size;
+  const totalItems = initialPurchase.length;
 
-  const filteredData = React.useMemo(() => {
-    let filtered = [...purchaseOrderData];
+  const filteredAndSortedData = React.useMemo(() => {
+    let filteredData = [...initialPurchase];
 
     if (searchQuery) {
-      filtered = filtered.filter(
+      
+      filteredData = filteredData.filter(
         (item) =>
           (item.product_name?.toLowerCase() || "").includes(
             searchQuery.toLowerCase()
@@ -69,7 +72,7 @@ export default function PurchaseTempClient() {
     }
 
     // Sort data based on the selected sort field and direction
-    filtered.sort((a, b) => {
+    filteredData.sort((a, b) => {
       // Handle null values and parse dates for proper comparison
       const valueA = a[sortField];
       const valueB = b[sortField];
@@ -89,8 +92,12 @@ export default function PurchaseTempClient() {
       }
     });
 
-    return filtered;
-  }, [searchQuery, sortField, sortDirection]);
+    return filteredData;
+  }, [
+    searchQuery,
+    sortField, 
+    sortDirection,
+    initialPurchase]);
 
   // Toggle a single row selection
   const toggleRowSelection = (id: number) => {
@@ -103,7 +110,7 @@ export default function PurchaseTempClient() {
   // Toggle all rows selection
   const toggleAllRows = () => {
     if (
-      Object.keys(selectedRows).length === filteredData.length &&
+      Object.keys(selectedRows).length === filteredAndSortedData.length &&
       Object.values(selectedRows).every((selected) => selected)
     ) {
       // If all are selected, clear selection
@@ -111,7 +118,7 @@ export default function PurchaseTempClient() {
     } else {
       // Otherwise, select all filtered rows
       const newSelectedRows: Record<string, boolean> = {};
-      filteredData.forEach((item) => {
+      filteredAndSortedData.forEach((item) => {
         newSelectedRows[item.item_id] = true;
       });
       setSelectedRows(newSelectedRows);
@@ -120,8 +127,8 @@ export default function PurchaseTempClient() {
 
   // Check if all filtered rows are selected
   const areAllRowsSelected =
-    filteredData.length > 0 &&
-    filteredData.every((item) => selectedRows[item.item_id]);
+    filteredAndSortedData.length > 0 &&
+    filteredAndSortedData.every((item) => selectedRows[item.item_id]);
 
   // Handle column sorting
   const handleSort = (field: "created_at" | "expect_date") => {
@@ -140,7 +147,7 @@ export default function PurchaseTempClient() {
 
   // Get selected items data
   const getSelectedItemsData = () => {
-    return filteredData.filter((item) => selectedRows[item.item_id]);
+    return filteredAndSortedData.filter((item) => selectedRows[item.item_id]);
   };
 
   // Handle bulk delete
@@ -322,7 +329,7 @@ export default function PurchaseTempClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredData.map((item) => (
+                  {filteredAndSortedData.map((item) => (
                     <TableRow key={item.item_id}>
                       <TableCell>
                         <Checkbox

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FileIcon, UploadIcon } from "lucide-react";
+import { FileIcon, UploadIcon, AlertCircle } from "lucide-react";
 import { IconFileImport } from "@tabler/icons-react";
 import { useSearchParams } from "next/navigation";
 
@@ -23,6 +23,11 @@ import {
 
 import { ImportHistory } from "@/lib/types";
 import { importHistory as mockImportHistory } from "@/lib/data/import-data";
+
+// CSV parsing types
+interface CSVRow {
+  [key: string]: string;
+}
 
 // Create a client component that uses useSearchParams
 function UploadContent() {
@@ -54,6 +59,18 @@ function UploadContent() {
     }>
   >([]);
 
+  // CSV 相關狀態
+  const [file, setFile] = React.useState<File | null>(null);
+  const [fileName, setFileName] = React.useState<string>("");
+  // csvHeaders 和 csvData 用於存儲 CSV 檔案的標頭和資料
+  const [csvHeaders, setCsvHeaders] = React.useState<string[]>([]);
+  const [csvData, setCsvData] = React.useState<CSVRow[]>([]);
+  const [columnTypes, setColumnTypes] = React.useState<Record<string, string>>({});
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [isDragging, setIsDragging] = React.useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   // 檢查 URL 參數，自動選擇「庫存匯入」
   React.useEffect(() => {
     const type = searchParams.get("type");
@@ -68,6 +85,312 @@ function UploadContent() {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setFileImportType(event.target.value);
+  };
+
+  // CSV 處理相關功能
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      processCSVFile(selectedFile);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    const droppedFile = event.dataTransfer.files[0];
+    if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.xlsx'))) {
+      processCSVFile(droppedFile);
+    } else {
+      setCsvError('請上傳 .csv 或 .xlsx 格式檔案');
+    }
+  };
+
+  const processCSVFile = (file: File) => {
+    setFile(file);
+    setFileName(file.name);
+    setCsvError(null);
+    setIsProcessing(true);
+    setCsvData([]);
+    setCsvHeaders([]);
+
+    if (file.name.endsWith('.csv')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          parseCSV(text);
+        } catch (err) {
+          console.error('File reading error:', err);
+          setCsvError('無法讀取檔案內容');
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+      reader.onerror = () => {
+        console.error('FileReader error');
+        setCsvError('讀取檔案時發生錯誤');
+        setIsProcessing(false);
+      };
+      reader.readAsText(file);
+    } else if (file.name.endsWith('.xlsx')) {
+      setCsvError('暫時不支援 Excel 檔案格式，請轉為 CSV 格式後再上傳');
+      setIsProcessing(false);
+    } else {
+      setCsvError('不支援的檔案格式');
+      setIsProcessing(false);
+    }
+  };
+
+  // Reset CSV data
+  const resetCsvData = () => {
+    setFile(null);
+    setFileName("");
+    setCsvHeaders([]);
+    setCsvData([]);
+    setColumnTypes({});
+    setCsvError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Helper to detect delimiter in CSV
+  const detectDelimiter = (text: string): string => {
+    const firstLine = text.split(/\r?\n/)[0];
+    const delimiters = [',', ';', '\t'];
+    let bestDelimiter = ',';
+    let maxCount = 0;
+
+    delimiters.forEach(delimiter => {
+      const count = (firstLine.split(delimiter).length - 1);
+      if (count > maxCount) {
+        maxCount = count;
+        bestDelimiter = delimiter;
+      }
+    });
+
+    console.log('Detected delimiter:', bestDelimiter, 'with count:', maxCount);
+    return bestDelimiter;
+  };
+
+  // Function signature kept for reference (implementation is below)
+  // const cleanValue = (value: string): string => { ... };
+
+  // Helper to detect column data type
+  const detectColumnType = (values: string[]): string => {
+    let hasNumbers = 0;
+    let hasNonNumbers = 0;
+    let hasDate = 0;
+    
+    for (const value of values) {
+      if (!value.trim()) continue; // Skip empty cells
+      
+      // Check if it's a date (matches common date formats)
+      if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(value) || 
+          /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(value) ||
+          /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2}$/.test(value)) {
+        hasDate++;
+        continue;
+      }
+      
+      // Check if it's a number
+      if (!isNaN(Number(value))) {
+        hasNumbers++;
+      } else {
+        hasNonNumbers++;
+      }
+    }
+    
+    // Determine most likely type
+    if (hasDate > Math.max(hasNumbers, hasNonNumbers)) {
+      return '日期';
+    } else if (hasNumbers > 0 && hasNonNumbers === 0) {
+      return '數字';
+    } else {
+      return '文字';
+    }
+  };
+
+  // 解析單行CSV，正確處理引號和逗號
+  const parseCSVLine = (line: string, delimiter: string): string[] => {
+    const values: string[] = [];
+    let currentValue = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = i + 1 < line.length ? line[i + 1] : '';
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // 處理連續兩個引號 - 表示轉義的引號
+          currentValue += '"';
+          i++; // 跳過下一個引號
+        } else {
+          // 切換引號狀態
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        // 只有在不在引號內時才視為分隔符
+        values.push(cleanValue(currentValue));
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+    
+    // 添加最後一個值
+    values.push(cleanValue(currentValue));
+    
+    return values;
+  };
+
+  // Helper to clean CSV values - 升級版，處理更複雜的情況
+  const cleanValue = (value: string): string => {
+    // 移除前後空格
+    let cleaned = value.trim();
+    
+    // 移除開頭和結尾的引號（只有當它們成對出現時）
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
+        (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+      cleaned = cleaned.substring(1, cleaned.length - 1);
+    }
+    
+    // 處理轉義的引號 ("") -> (")
+    cleaned = cleaned.replace(/""/g, '"');
+    
+    // 移除值開頭和末尾的多餘逗號
+    cleaned = cleaned.replace(/^,+/, ''); // 移除開頭的逗號
+    cleaned = cleaned.replace(/,+$/, ''); // 移除末尾的逗號
+    
+    return cleaned;
+  };
+
+  const parseCSV = (csvText: string) => {
+    try {
+      console.log('CSV Text to parse:', csvText.substring(0, 200) + '...');
+      
+      // 移除 UTF-8 BOM (Byte Order Mark)，這在從 Excel 導出的 CSV 中很常見
+      let cleanedText = csvText;
+      if (csvText.charCodeAt(0) === 0xFEFF) {
+        cleanedText = csvText.substring(1);
+        console.log('BOM detected and removed');
+      }
+      
+      // 預處理文本，解決一些常見的CSV問題
+      cleanedText = cleanedText
+        .replace(/\r\n?/g, '\n')          // 統一換行符號為 \n
+        .replace(/,,+/g, ',')             // 替換連續多個逗號為單一逗號
+        .replace(/^,|,$/gm, '');          // 移除每行開頭和結尾的逗號
+      
+      // 檢測分隔符
+      const delimiter = detectDelimiter(cleanedText);
+      console.log('Detected delimiter:', delimiter);
+      
+      // 分割行 - 必須考慮引號內換行的情況
+      const lines: string[] = [];
+      let currentLine = '';
+      let inQuotes = false;
+      
+      // 逐字符處理文本，處理引號內的換行符
+      for (let i = 0; i < cleanedText.length; i++) {
+        const char = cleanedText[i];
+        const nextChar = i + 1 < cleanedText.length ? cleanedText[i + 1] : '';
+        
+        if (char === '"') {
+          // 檢查是否為轉義的引號 ("")
+          if (nextChar === '"') {
+            currentLine += '"'; // 添加一個引號並跳過下一個
+            i++;
+          } else {
+            inQuotes = !inQuotes; // 切換引號狀態
+            currentLine += char;
+          }
+        } else if (char === '\n' && !inQuotes) {
+          // 只有在不在引號內時才將當前行添加到行列表中
+          if (currentLine.trim()) {
+            lines.push(currentLine);
+          }
+          currentLine = '';
+        } else {
+          currentLine += char;
+        }
+      }
+      
+      // 添加最後一行
+      if (currentLine.trim()) {
+        lines.push(currentLine);
+      }
+      
+      console.log('Number of lines after processing:', lines.length);
+      
+      if (lines.length === 0) {
+        setCsvError('CSV 檔案沒有內容');
+        return;
+      }
+
+      // 解析標頭 - 需要正確處理帶引號的標頭
+      const headers = parseCSVLine(lines[0], delimiter);
+      console.log('Headers found:', headers);
+      setCsvHeaders(headers);
+
+      // 解析資料行
+      const parsedData: CSVRow[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], delimiter);
+        
+        console.log(`Values for row ${i}:`, values);
+        
+        if (values.length !== headers.length) {
+          console.warn(`Skipping row ${i} due to column count mismatch: expected ${headers.length}, got ${values.length}`, values);
+          continue; // 跳過不符合標頭長度的行
+        }
+        
+        const dataRow: CSVRow = {};
+        headers.forEach((header, index) => {
+          dataRow[header] = values[index];
+        });
+        parsedData.push(dataRow);
+      }
+
+      console.log('Parsed data count:', parsedData.length);
+      if (parsedData.length > 0) {
+        console.log('First row sample:', parsedData[0]);
+      }
+
+      setCsvData(parsedData);
+      setCsvError(null);
+
+      // 檢查解析的數據是否合理
+      if (parsedData.length === 0) {
+        setCsvError('解析後沒有有效資料行');
+        return;
+      }
+
+      // 檢測並存儲每列的數據類型
+      const columnTypes: {[key: string]: string} = {};
+      headers.forEach(header => {
+        const columnValues = parsedData.map(row => row[header]);
+        columnTypes[header] = detectColumnType(columnValues);
+      });
+      setColumnTypes(columnTypes);
+      
+      console.log('Column types detected:', columnTypes);
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      setCsvError(`解析 CSV 時發生錯誤: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   // Handler for manual import type selection
@@ -151,6 +474,72 @@ function UploadContent() {
     setModels(models.filter((model) => model.id !== id));
   };
 
+  // 上傳狀態追蹤
+  const [isUploading, setIsUploading] = React.useState<boolean>(false);
+  const [uploadSuccess, setUploadSuccess] = React.useState<boolean | null>(null);
+  const [uploadMessage, setUploadMessage] = React.useState<string | null>(null);
+  const noteRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // 檔案上傳處理
+  const handleFileSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!file || !fileImportType) {
+      return;
+    }
+    
+    // 開始上傳
+    setIsUploading(true);
+    setUploadSuccess(null);
+    setUploadMessage(null);
+    
+    try {
+      // 準備 FormData 進行上傳
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('importType', fileImportType);
+      formData.append('parsedData', JSON.stringify(csvData));
+      
+      // 加入備註資訊（如果有的話）
+      if (noteRef.current?.value) {
+        formData.append('note', noteRef.current.value);
+      }
+      
+      // 發送請求到後端 API
+      const response = await fetch('/api/import', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // 處理成功
+        setUploadSuccess(true);
+        setUploadMessage(result.message || "匯入成功！");
+        
+        // 成功後重置表單，讓使用者可以進行下一次上傳
+        setTimeout(() => {
+          resetCsvData();
+          if (noteRef.current) {
+            noteRef.current.value = "";
+          }
+        }, 3000);
+        
+      } else {
+        // 處理失敗
+        setUploadSuccess(false);
+        setUploadMessage(result.message || "匯入失敗，請重試。");
+      }
+    } catch (error) {
+      console.error('上傳時發生錯誤:', error);
+      setUploadSuccess(false);
+      setUploadMessage("上傳過程中發生錯誤，請重試。");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -171,61 +560,194 @@ function UploadContent() {
                   <CardContent className="pt-3">
                     <h3 className="text-xl font-medium mb-2">上傳檔案</h3>
                     <div className="flex flex-col justify-between gap-4">
-                      <div className="flex gap-2 mb-2">
-                        <div className="flex items-center">
-                          <Input
-                            type="radio"
-                            id="batch-import"
-                            name="import-type-left"
-                            value="batch"
-                            className="h-4 w-4"
-                            onChange={handleFileImportTypeChange}
-                            checked={fileImportType === "batch"}
-                          />
-                          <Label htmlFor="batch-import" className="ml-2">
-                            銷售匯入
-                          </Label>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex gap-2">
+                          <div className="flex items-center">
+                            <Input
+                              type="radio"
+                              id="batch-import"
+                              name="import-type-left"
+                              value="batch"
+                              className="h-4 w-4"
+                              onChange={handleFileImportTypeChange}
+                              checked={fileImportType === "batch"}
+                            />
+                            <Label htmlFor="batch-import" className="ml-2">
+                              銷售匯入
+                            </Label>
+                          </div>
+                          <div className="flex items-center">
+                            <Input
+                              type="radio"
+                              id="single-import"
+                              name="import-type-left"
+                              value="single"
+                              className="h-4 w-4"
+                              onChange={handleFileImportTypeChange}
+                              checked={fileImportType === "single"}
+                            />
+                            <Label htmlFor="single-import" className="ml-2">
+                              庫存匯入
+                            </Label>
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          <Input
-                            type="radio"
-                            id="single-import"
-                            name="import-type-left"
-                            value="single"
-                            className="h-4 w-4"
-                            onChange={handleFileImportTypeChange}
-                            checked={fileImportType === "single"}
-                          />
-                          <Label htmlFor="single-import" className="ml-2">
-                            庫存匯入
-                          </Label>
-                        </div>
+                        
                       </div>
 
-                      <div className="border border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center h-40 cursor-pointer hover:bg-gray-50">
+                      <div 
+                        className={`border border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} rounded-lg flex flex-col items-center justify-center h-40 cursor-pointer hover:bg-gray-50`}
+                        onClick={() => fileInputRef.current?.click()} 
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        <input 
+                          type="file" 
+                          ref={fileInputRef}
+                          className="hidden" 
+                          accept=".csv,.xlsx" 
+                          onChange={handleFileChange}
+                        />
                         <div className="flex flex-col items-center justify-center py-6">
-                          <UploadIcon className="h-10 w-10 text-gray-400 mb-2" />
-                          <p className="text-sm text-center">
-                            拖放檔案或點擊上傳
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            支援 .xlsx, .csv 檔案格式
-                          </p>
+                          {!fileName ? (
+                            <>
+                              <UploadIcon className="h-10 w-10 text-gray-400 mb-2" />
+                              <p className="text-sm text-center">
+                                拖放檔案或點擊上傳
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                支援 .xlsx, .csv 檔案格式
+                              </p>
+                            </>
+                          ) : isProcessing ? (
+                            <>
+                              <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></div>
+                              <p className="text-sm font-medium text-center">{fileName}</p>
+                              <p className="text-xs text-blue-500">
+                                正在處理檔案...
+                              </p>
+                            </>
+                          ) : (
+                            <div className="text-center">
+                              <FileIcon className="h-10 w-10 text-blue-500 mb-2 mx-auto" />
+                              <p className="text-sm font-medium">{fileName}</p>
+                              <p className="text-xs text-blue-500 mb-2">
+                                {csvData.length > 0 ? `已解析 ${csvData.length} 筆資料` : '檔案已準備上傳'}
+                              </p>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  resetCsvData();
+                                }}
+                                className="text-xs text-gray-500 underline hover:text-red-500"
+                                type="button"
+                              >
+                                重新上傳
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
+                      
+                      {csvError && (
+                        <div className="flex items-center gap-2 text-red-500 bg-red-50 p-2 rounded">
+                          <AlertCircle className="h-4 w-4" />
+                          <p className="text-sm">{csvError}</p>
+                        </div>
+                      )}
 
-                      <div className="text-sm text-gray-500">
+                      {/* CSV 預覽區 - 增強可見度 */}
+                      {csvData.length > 0 && (
+                        <div className="mt-4 border p-4 rounded-lg bg-blue-50">
+                          <h4 className="text-sm font-medium mb-2">資料預覽 ({csvData.length} 筆資料)</h4>
+                          <div className="max-h-60 overflow-auto border rounded bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  {csvHeaders.map((header, index) => (
+                                    <TableHead key={index} className="text-xs">
+                                      <div>
+                                        <span className="font-semibold">{header}</span>
+                                        {columnTypes[header] && (
+                                          <span className={`ml-1 text-[10px] px-1 py-0.5 rounded-sm ${
+                                            columnTypes[header] === '數字' 
+                                              ? 'bg-blue-50 text-blue-600' 
+                                              : columnTypes[header] === '日期' 
+                                                ? 'bg-green-50 text-green-600' 
+                                                : 'bg-gray-50 text-gray-600'
+                                          }`}>
+                                            {columnTypes[header]}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </TableHead>
+                                  ))}
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {csvData.slice(0, 5).map((row, rowIndex) => (
+                                  <TableRow key={rowIndex}>
+                                    {csvHeaders.map((header, cellIndex) => (
+                                      <TableCell 
+                                        key={`${rowIndex}-${cellIndex}`}
+                                        className="text-xs py-2"
+                                      >
+                                        {row[header]}
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {csvData.length > 5 && (
+                              <div className="text-center p-2 text-xs text-gray-500">
+                                顯示前 5 筆資料，共 {csvData.length} 筆
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-sm text-gray-500 mt-4">
                         <h4 className="font-medium">備註</h4>
                         <Textarea
+                          ref={noteRef}
                           placeholder="請輸入此次匯入的相關資訊..."
                           className="w-full h-[184px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground mt-2 min-h-[80px]"
                         />
                       </div>
 
-                      <Button className="w-full" type="submit">
-                        {/* TODO: 前端需要將檔案和匯入類型資料送到後端 */}
-                        確認上傳
+                      <Button 
+                        className="w-full" 
+                        type="button"
+                        onClick={handleFileSubmit}
+                        disabled={!fileName || csvError !== null || !fileImportType || csvData.length === 0 || isUploading}
+                      >
+                        {isUploading ? (
+                          <>
+                            <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
+                            上傳中...
+                          </>
+                        ) : (
+                          "確認上傳"
+                        )}
                       </Button>
+                      
+                      {uploadSuccess !== null && (
+                        <div className={`mt-3 p-2 rounded text-center ${uploadSuccess ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                          {uploadMessage}
+                        </div>
+                      )}
+                      
+                      {fileName && !csvError && csvData.length === 0 && !isProcessing && (
+                        <div className="text-center p-4 border rounded bg-gray-50 mt-4">
+                          <p className="text-sm text-gray-600">
+                            尚未發現資料或檔案格式可能不正確。
+                            <br />
+                            請確保您上傳的是有效的 CSV 檔案。
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

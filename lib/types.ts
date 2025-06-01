@@ -40,6 +40,18 @@ export type InventoryDashboardRow = {
 // 用於我的叫貨
 export type MyInventory = Supplier & Product & ProductModel & PurchaseItem & PurchaseBatch;
 
+export type PurchaseDashboardRow = {
+  item_id: number;
+  quantity: number;
+  batch_id: number;
+  created_at: string;
+  expect_date: string;
+  status: string;
+  supplier_name: string;
+  model_name: string;
+  product_name: string;
+  note?: string;
+};
 
 // 用於匯入歷史
 export interface ImportHistory {

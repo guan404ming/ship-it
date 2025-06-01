@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import type { PurchaseDashboardRow } from "@/lib/types";
 
 export async function createPurchaseBatch(
   supplierId: number,
@@ -84,4 +85,47 @@ export async function getPurchaseBatches() {
 
   if (error) throw error;
   return data;
+}
+
+export async function getPurchaseDashboardData(): Promise<
+  PurchaseDashboardRow[]
+> {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from("purchase_items")
+    .select(`
+      *,
+      purchase_batches (
+        *,
+        suppliers (supplier_name)
+      ),
+      product_models (
+        model_name,
+        products(product_name)
+      )
+    `);
+
+  if (error) throw error;
+
+  return data.map((i): PurchaseDashboardRow => {
+    const pb = i.purchase_batches;
+    const s = pb.suppliers;
+    const pm = i.product_models;
+    const p = pm.products;
+
+    return {
+      item_id: i.item_id,
+      quantity: i.quantity,
+      batch_id: pb.batch_id,
+      created_at: pb.created_at,
+      expect_date: pb.expect_date,
+      status: pb.status,
+      supplier_name: s.supplier_name,
+      model_name: pm.model_name,
+      product_name: p.product_name,
+      note: i.note ?? null,
+    };
+  });
 }

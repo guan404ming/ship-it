@@ -161,3 +161,12 @@ export function calculateDataGrowthRates<T extends { date: string }>(
   
   return result;
 }
+
+/**
+ * 將日期格式化為 YYYY-MM-DD 字串
+ */
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return "-";
+  const d = new Date(date);
+  return d.toISOString().split("T")[0]; // e.g. 2025-06-01
+}

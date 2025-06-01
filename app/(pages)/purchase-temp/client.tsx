@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { PurchaseDashboardRow } from "@/lib/types";
+import { formatDate } from "@/lib/date-utils";
 
 interface PurchaseTempClientProps {
   initialPurchase: PurchaseDashboardRow[];
@@ -348,8 +349,8 @@ export default function PurchaseClient({ initialPurchase }: PurchaseTempClientPr
                       <TableCell className="text-right font-mono">
                         {item.unit_cost}
                       </TableCell>
-                      <TableCell>{item.created_at}</TableCell>
-                      <TableCell>{item.expect_date}</TableCell>
+                      <TableCell>{formatDate(item.created_at)}</TableCell>
+                      <TableCell>{formatDate(item.expect_date)}</TableCell>
                       <TableCell>{item.note || "-"}</TableCell>
                       <TableCell>
                         <PurchaseEditDialog

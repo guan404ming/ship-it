@@ -1,7 +1,7 @@
 // Buffett May. 26
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/database.types";
-import { SalesData } from "@/lib/types";
+import { GroupedProductSales, SalesData } from "@/lib/types";
 
 const db = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,17 +14,6 @@ type OrderWithItems = {
   order_items: {
     quantity: number | null;
   }[];
-};
-
-type ProductStatsPoint = {
-  date: string;
-  amount: number;
-  quantity: number;
-};
-
-type ProductStats = {
-  product_id: number;
-  data: ProductStatsPoint[];
 };
 
 export async function getProductSalesStats(
@@ -99,110 +88,79 @@ export async function getProductSalesStats(
   }
 }
 
-// 當使用者選取商品後，根據選取的時間範圍，回傳所選商品加總 order_items.amount（銷售額）、加總 order_items.quantity （銷售量）的時間序列
-// Input: Product_ID(s), 起始日期, 結束日期
-// Output: Product_IDs: {每日銷售額, 每日銷售數量}
-// {
-//   "success": true,
-//   "data": [
-//     {
-//       "product_id": 1,
-//       "data": [
-//         {
-//            "date": "2024-01-02",
-//            "amount": 3800,
-//            "quantity": 21
-//         },
-//         ...
-//       ]
-//     },
-//   ]
-// }
-export async function getProductStatsByIds(
-  productIds: number[],
+export async function getProductStats(
   startDate: string,
   endDate: string
-): Promise<{ success: boolean; data?: ProductStats[]; error?: string }> {
+): Promise<GroupedProductSales[]> {
   try {
-    // Input validation
-    if (!productIds?.length) {
-      throw new Error("Product IDs are required");
-    }
-
-    const { data: orders, error } = await db
-      .from("orders")
-      .select(
-        `
-        created_at,
-        order_items (
-          product_id,
-          quantity,
-          total_price
+    const [products, models, orders] = await Promise.all([
+      db.from("products").select("*"),
+      db.from("product_models").select("*"),
+      db
+        .from("orders")
+        .select(
+          `created_at, order_items (product_id, model_id, quantity, total_price)`
         )
-      `
-      )
-      .gte("created_at", startDate)
-      .lte("created_at", endDate);
+        .gte("created_at", startDate)
+        .lte("created_at", endDate),
+    ]);
 
-    if (error) throw error;
+    if (products.error || models.error || orders.error)
+      throw products.error || models.error || orders.error;
 
-    // 建立日期清單
-    const dateList: string[] = [];
-    const current = new Date(startDate);
-    const end = new Date(endDate);
-    while (current <= end) {
-      dateList.push(current.toISOString().split("T")[0]);
-      current.setDate(current.getDate() + 1);
-    }
+    const dateList = Array.from(
+      {
+        length:
+          Math.ceil(
+            (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+              (1000 * 60 * 60 * 24)
+          ) + 1,
+      },
+      (_, i) =>
+        new Date(new Date(startDate).getTime() + i * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0]
+    );
 
-    // 初始化 product map: product_id -> { date -> { amount, quantity } }
-    const productMap: Record<number, Record<string, ProductStatsPoint>> = {};
+    const result =
+      products.data?.map((p) => ({
+        product_id: p.product_id,
+        product_name: p.product_name || "",
+        listed_date: p.listed_date || "",
+        status: p.status || "",
+        models:
+          models.data
+            ?.filter((m) => m.product_id === p.product_id)
+            .map((m) => ({
+              model_id: m.model_id,
+              model_name: m.model_name || "",
+              original_price: m.original_price || 0,
+              promo_price: m.promo_price,
+              created_at: m.created_at || "",
+              product_id: m.product_id || 0,
+              data: dateList.map((d) => ({ date: d, amount: 0, quantity: 0 })),
+            })) || [],
+      })) || [];
 
-    // Initialize data structure for each product ID and date
-    productIds.forEach((productId) => {
-      productMap[productId] = {};
-      dateList.forEach((date) => {
-        productMap[productId][date] = {
-          date,
-          amount: 0,
-          quantity: 0,
-        };
-      });
-    });
+    orders.data?.forEach((o) =>
+      o.order_items?.forEach((i) => {
+        const dateData = result
+          .find((p) => p.product_id === i.product_id)
+          ?.models.find((m) => m.model_id === i.model_id)
+          ?.data.find(
+            (d) =>
+              d.date === new Date(o.created_at!).toISOString().split("T")[0]
+          );
+        if (dateData) {
+          dateData.amount += Number(i.total_price) || 0;
+          dateData.quantity += Number(i.quantity) || 0;
+        }
+      })
+    );
 
-    // Process orders and aggregate data
-    if (orders) {
-      orders.forEach((order) => {
-        if (!order.created_at || !order.order_items) return;
-
-        const date = new Date(order.created_at).toISOString().split("T")[0];
-
-        order.order_items.forEach((item) => {
-          if (!item.product_id || !productIds.includes(item.product_id)) return;
-
-          const productStats = productMap[item.product_id][date];
-          if (productStats) {
-            productStats.amount += Number(item.total_price) || 0;
-            productStats.quantity += Number(item.quantity) || 0;
-          }
-        });
-      });
-    }
-
-    // Convert to final format and sort data
-    const result: ProductStats[] = productIds.map((productId) => ({
-      product_id: productId,
-      data: Object.values(productMap[productId]).sort((a, b) =>
-        a.date.localeCompare(b.date)
-      ),
-    }));
-
-    return { success: true, data: result };
+    return result;
   } catch (error) {
-    console.error("Error in getProductStatsByIds:", error);
-    return {
-      success: false,
-      error: (error as Error).message,
-    };
+    console.error("Error in getProductStats:", error);
+    return [];
   }
 }

@@ -3,12 +3,17 @@ import { OverallPerformance } from "@/components/history/overall-performance";
 import { ProductPerformance } from "@/components/history/product-performance";
 import { SalesRankings } from "@/components/history/sales-rankings";
 
-import { productRankingData, productSalesData } from "@/lib/data/sales-data";
-import { getProductSalesStats } from "@/actions/stats";
+import { productRankingData } from "@/lib/data/sales-data";
+import { getProductSalesStats, getProductStats } from "@/actions/stats";
 import dayjs from "dayjs";
 
 export default async function HistoryClient() {
   const salesData = await getProductSalesStats(
+    dayjs().subtract(180, "day").format("YYYY-MM-DD"),
+    dayjs().format("YYYY-MM-DD")
+  );
+
+  const productSalesData = await getProductStats(
     dayjs().subtract(180, "day").format("YYYY-MM-DD"),
     dayjs().format("YYYY-MM-DD")
   );

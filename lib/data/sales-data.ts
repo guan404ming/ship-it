@@ -1,34 +1,4 @@
-import { SalesData, RankingProduct, GroupedProductSales } from '../types';
-
-export const salesData: SalesData[] = [
-  { date: "2024-11-01", amount: 6240, quantity: 124 },
-  { date: "2024-11-07", amount: 6580, quantity: 131 },
-  { date: "2024-11-14", amount: 6750, quantity: 135 },
-  { date: "2024-11-21", amount: 7020, quantity: 141 },
-  { date: "2024-11-28", amount: 7430, quantity: 148 },
-  { date: "2024-12-05", amount: 8120, quantity: 162 },
-  { date: "2024-12-12", amount: 8740, quantity: 174 },
-  { date: "2024-12-19", amount: 9580, quantity: 192 },
-  { date: "2024-12-26", amount: 10240, quantity: 204 },
-  { date: "2025-01-02", amount: 8520, quantity: 170 },
-  { date: "2025-01-09", amount: 8160, quantity: 163 },
-  { date: "2025-01-16", amount: 7820, quantity: 156 },
-  { date: "2025-01-23", amount: 8050, quantity: 161 },
-  { date: "2025-01-30", amount: 8380, quantity: 167 },
-  { date: "2025-02-06", amount: 8960, quantity: 179 },
-  { date: "2025-02-13", amount: 9240, quantity: 184 },
-  { date: "2025-02-20", amount: 9540, quantity: 190 },
-  { date: "2025-02-27", amount: 9870, quantity: 197 },
-  { date: "2025-03-06", amount: 10240, quantity: 204 },
-  { date: "2025-03-13", amount: 10530, quantity: 210 },
-  { date: "2025-03-20", amount: 10860, quantity: 217 },
-  { date: "2025-03-27", amount: 11180, quantity: 223 },
-  { date: "2025-04-03", amount: 11450, quantity: 229 },
-  { date: "2025-04-10", amount: 11680, quantity: 233 },
-  { date: "2025-04-17", amount: 11940, quantity: 238 },
-  { date: "2025-04-24", amount: 12240, quantity: 244 },
-  { date: "2025-05-01", amount: 12480, quantity: 249 },
-];
+import { RankingProduct, GroupedProductSales } from "../types";
 
 export const productRankingData: RankingProduct[] = [
   {

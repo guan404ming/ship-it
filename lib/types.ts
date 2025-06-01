@@ -43,7 +43,6 @@ export type MyInventory = Supplier & Product & ProductModel & PurchaseItem & Pur
 export type PurchaseDashboardRow = {
   item_id: number;
   quantity: number;
-  unit_cost: number;
   batch_id: number;
   created_at: string;
   expect_date: string;

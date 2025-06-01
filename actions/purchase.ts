@@ -118,7 +118,6 @@ export async function getPurchaseDashboardData(): Promise<
     return {
       item_id: i.item_id,
       quantity: i.quantity,
-      unit_cost: i.unit_cost,
       batch_id: pb.batch_id,
       created_at: pb.created_at,
       expect_date: pb.expect_date,

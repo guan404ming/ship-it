@@ -290,7 +290,6 @@ export default function PurchaseClient({ initialPurchase }: PurchaseTempClientPr
                     <TableHead>商品名稱</TableHead>
                     <TableHead>規格</TableHead>
                     <TableHead className="text-right">數量</TableHead>
-                    <TableHead className="text-right">單價</TableHead>
                     <TableHead>
                       <button
                         className="flex items-center gap-1 focus:outline-none hover:text-primary"
@@ -345,9 +344,6 @@ export default function PurchaseClient({ initialPurchase }: PurchaseTempClientPr
                       <TableCell>{item.model_name}</TableCell>
                       <TableCell className="text-right font-mono">
                         {item.quantity}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {item.unit_cost}
                       </TableCell>
                       <TableCell>{formatDate(item.created_at)}</TableCell>
                       <TableCell>{formatDate(item.expect_date)}</TableCell>

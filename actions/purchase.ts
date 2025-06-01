@@ -11,7 +11,7 @@ export async function createPurchaseBatch(
   items?: {
     model_id: number;
     quantity: number;
-    unit_cost: number;
+    note?: string | null;
   }[]
 ) {
   const cookieStore = cookies();
@@ -36,7 +36,7 @@ export async function createPurchaseBatch(
         batch_id: data.batch_id,
         model_id: item.model_id,
         quantity: item.quantity,
-        unit_cost: item.unit_cost,
+        note: item.note ?? null,
       }))
     );
   }
@@ -48,7 +48,7 @@ export async function addPurchaseItem(
   batchId: number,
   modelId: number,
   quantity: number,
-  unitCost: number
+  note?: string | null
 ) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
@@ -59,8 +59,8 @@ export async function addPurchaseItem(
       {
         batch_id: batchId,
         model_id: modelId,
-        quantity,
-        unit_cost: unitCost,
+        quantity: quantity,
+        note: note ?? null,
       },
     ])
     .select()

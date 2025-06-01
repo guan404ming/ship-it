@@ -179,45 +179,47 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     orderStatusFilter !== "所有狀態";
 
   return (
-    <div className="w-full">
-      <div className="flex flex-1 flex-col gap-4">
-        <InventoryHeader onInventoryImport={handleInventoryImport} />
-        <InventorySummary
-          totalItems={totalItems}
-          lowStockItems={lowStockItems}
+    <div className="flex flex-1 flex-col h-full w-full">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <InventoryHeader onInventoryImport={handleInventoryImport} />
+          <InventorySummary
+            totalItems={totalItems}
+            lowStockItems={lowStockItems}
+          />
+          <InventoryFilterBar
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            stockStatusFilter={stockStatusFilter}
+            onStockStatusFilterChange={handleStockStatusFilter}
+            orderStatusFilter={orderStatusFilter}
+            onOrderStatusFilterChange={handleOrderStatusFilter}
+            selectedItemsCount={selectedItems.size}
+            onBulkOrder={() => setIsDialogOpen(true)}
+            onBulkDelete={handleBulkDelete}
+            onClearAllFilters={clearAllFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+          <InventoryTable
+            filteredAndSortedData={filteredAndSortedData}
+            selectedItems={selectedItems}
+            sortConfig={sortConfig}
+            onToggleItemSelection={toggleItemSelection}
+            onToggleSelectAll={toggleSelectAll}
+            onRequestSort={requestSort}
+            onStockStatusFilter={handleStockStatusFilter}
+            onOrderStatusFilter={handleOrderStatusFilter}
+            stockStatusFilter={stockStatusFilter}
+            orderStatusFilter={orderStatusFilter}
+          />
+          <InventoryStatusExplanation />
+        </div>
+        <PurchaseImportDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          selectedItems={isDialogOpen ? getSelectedItemsData() : []}
         />
-        <InventoryFilterBar
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          stockStatusFilter={stockStatusFilter}
-          onStockStatusFilterChange={handleStockStatusFilter}
-          orderStatusFilter={orderStatusFilter}
-          onOrderStatusFilterChange={handleOrderStatusFilter}
-          selectedItemsCount={selectedItems.size}
-          onBulkOrder={() => setIsDialogOpen(true)}
-          onBulkDelete={handleBulkDelete}
-          onClearAllFilters={clearAllFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
-        <InventoryTable
-          filteredAndSortedData={filteredAndSortedData}
-          selectedItems={selectedItems}
-          sortConfig={sortConfig}
-          onToggleItemSelection={toggleItemSelection}
-          onToggleSelectAll={toggleSelectAll}
-          onRequestSort={requestSort}
-          onStockStatusFilter={handleStockStatusFilter}
-          onOrderStatusFilter={handleOrderStatusFilter}
-          stockStatusFilter={stockStatusFilter}
-          orderStatusFilter={orderStatusFilter}
-        />
-        <InventoryStatusExplanation />
       </div>
-      <PurchaseImportDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        selectedItems={isDialogOpen ? getSelectedItemsData() : []}
-      />
     </div>
   );
 }

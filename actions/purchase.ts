@@ -17,7 +17,7 @@ export async function createPurchaseBatch(
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase
+  const { data, error: batchError } = await supabase
     .from("purchase_batches")
     .insert([
       {
@@ -30,8 +30,13 @@ export async function createPurchaseBatch(
     .select()
     .single();
 
-  if (items) {
-    await supabase.from("purchase_items").insert(
+  if (batchError) {
+    console.error("Failed to insert purchase_batch:", batchError);
+    throw batchError;
+  }
+
+  if (items && items.length > 0) {
+    const { error: itemError } = await supabase.from("purchase_items").insert(
       items.map((item) => ({
         batch_id: data.batch_id,
         model_id: item.model_id,
@@ -39,9 +44,13 @@ export async function createPurchaseBatch(
         note: item.note ?? null,
       }))
     );
+
+    if (itemError) {
+      console.error("Failed to insert purchase_items:", itemError);
+      throw itemError;
+    }
   }
-  if (error) throw error;
-  return data;
+  return data
 }
 
 export async function addPurchaseItem(

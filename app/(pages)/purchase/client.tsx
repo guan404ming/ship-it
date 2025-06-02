@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
+import { PurchaseImportDialog } from "@/components/purchase-import/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { PurchaseDashboardRow } from "@/lib/types";
 import { formatDate } from "@/lib/date-utils";
@@ -33,7 +33,9 @@ interface PurchaseTempClientProps {
   initialPurchase: PurchaseDashboardRow[];
 }
 
-export default function PurchaseClient({ initialPurchase }: PurchaseTempClientProps) {
+export default function PurchaseClient({
+  initialPurchase,
+}: PurchaseTempClientProps) {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedRows, setSelectedRows] = React.useState<
@@ -50,14 +52,14 @@ export default function PurchaseClient({ initialPurchase }: PurchaseTempClientPr
     setIsDialogOpen(true);
   };
 
-  const totalOrders = new Set(initialPurchase.map((item) => item.batch_id)).size;
+  const totalOrders = new Set(initialPurchase.map((item) => item.batch_id))
+    .size;
   const totalItems = initialPurchase.length;
 
   const filteredAndSortedData = React.useMemo(() => {
     let filteredData = [...initialPurchase];
 
     if (searchQuery) {
-      
       filteredData = filteredData.filter(
         (item) =>
           (item.product_name?.toLowerCase() || "").includes(
@@ -94,11 +96,7 @@ export default function PurchaseClient({ initialPurchase }: PurchaseTempClientPr
     });
 
     return filteredData;
-  }, [
-    searchQuery,
-    sortField, 
-    sortDirection,
-    initialPurchase]);
+  }, [searchQuery, sortField, sortDirection, initialPurchase]);
 
   // Toggle a single row selection
   const toggleRowSelection = (id: number) => {

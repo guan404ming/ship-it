@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { InventoryDashboardRow } from "@/lib/types";
-import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
+import { PurchaseImportDialog } from "@/components/purchase-import/purchase-import-dialog";
 import { InventoryHeader } from "./inventory-header";
 import { InventorySummary } from "./inventory-summary";
 import { InventoryFilterBar } from "./inventory-filter-bar";
@@ -147,8 +147,6 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     sortConfig,
     initialInventory,
   ]);
-
-  console.log(filteredAndSortedData);
 
   const toggleItemSelection = (modelId: string) => {
     setSelectedItems((prevSelected) => {

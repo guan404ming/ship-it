@@ -142,18 +142,20 @@ export function FileUploadSection({
     setUploadMessage(null);
 
     try {
-      csvData.map(async (row) => {
-        const { model_id } = await getProductAndModelIdByName(
-          row["商品名稱"],
-          row["商品規格"]
-        );
+      await Promise.all(
+        csvData.map(async (row) => {
+          const { model_id } = await getProductAndModelIdByName(
+            row["商品名稱"],
+            row["商品規格"]
+          );
 
-        await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
+          await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
 
-        toast.success(
-          `成功新增商品: ${row["商品名稱"]} 規格: ${row["商品規格"]} 數量: ${row["數量"]}`
-        );
-      });
+          toast.success(
+            `成功新增商品: ${row["商品名稱"]} 規格: ${row["商品規格"]} 數量: ${row["數量"]}`
+          );
+        })
+      );
 
       setUploadSuccess(true);
       setUploadMessage("匯入成功！");

@@ -13,13 +13,15 @@ import { importHistory as mockImportHistory } from "@/lib/data/import-data";
 export default function InventoryClient() {
   const searchParams = useSearchParams();
   const [fileImportType, setFileImportType] = useState<string | null>(null);
-  const [manualImportType, setManualImportType] = useState<string | null>(null);
+  const [manualImportType, setManualImportType] = useState<string | null>(
+    "order"
+  );
 
   useEffect(() => {
     const type = searchParams.get("type");
     if (type === "inventory") {
       setFileImportType("single");
-      setManualImportType("single");
+      setManualImportType("inventory");
     }
   }, [searchParams]);
 

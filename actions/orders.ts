@@ -32,7 +32,7 @@ interface OrderUpdateData {
   cancel_reason?: string;
 }
 
-export async function createOrderFromInput(input: OrderInput) {
+export async function createOrder(input: OrderInput) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -40,10 +40,24 @@ export async function createOrderFromInput(input: OrderInput) {
     // Destructure to separate items from order data
     const { items, ...orderData } = input;
 
+    // Generate a unique order_id (e.g., 'ORD' + YYYYMMDDHHMMSS + random 4 digits)
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const dateStr =
+      now.getFullYear().toString() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds());
+    const randomStr = Math.floor(1000 + Math.random() * 9000).toString();
+    const order_id = `ORD${dateStr}${randomStr}`;
+
     // Insert order using spread syntax for cleaner code
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
+        order_id,
         ...orderData,
         created_at: new Date().toISOString(),
         payment_time: orderData.payment_time ?? null,
@@ -70,62 +84,6 @@ export async function createOrderFromInput(input: OrderInput) {
     console.error("Error creating order:", error);
     throw error;
   }
-}
-
-export async function createOrder(
-  buyerId: number,
-  items: {
-    productId: number;
-    modelId: number;
-    quantity: number;
-    soldPrice: number;
-  }[],
-  shippingFee: number
-) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-
-  const productTotalPrice = items.reduce(
-    (sum, item) => sum + item.soldPrice * item.quantity,
-    0
-  );
-  const totalPaid = productTotalPrice + shippingFee;
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert([
-      {
-        buyer_id: buyerId,
-        product_total_price: productTotalPrice,
-        shipping_fee: shippingFee,
-        total_paid: totalPaid,
-        order_status: "pending",
-        created_at: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
-
-  if (orderError) throw orderError;
-
-  // Use spread syntax for cleaner mapping
-  const orderItems = items.map((item) => ({
-    order_id: order.order_id,
-    product_id: item.productId,
-    model_id: item.modelId,
-    quantity: item.quantity,
-    sold_price: item.soldPrice,
-    total_price: item.soldPrice * item.quantity,
-    returned_quantity: 0,
-  }));
-
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItems);
-
-  if (itemsError) throw itemsError;
-
-  return order;
 }
 
 export async function updateOrderStatus(

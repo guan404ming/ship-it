@@ -8,12 +8,15 @@ import { Label } from "@/components/ui/label";
 import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
 import { upsertStockRecord } from "@/actions/stock_record";
+import { createOrder } from "@/actions/orders";
 
 interface Model {
   id: string;
   modelName: string;
   quantity: string;
   error: string | null;
+  price: string;
+  priceError: string | null;
 }
 
 interface ManualInputSectionProps {
@@ -58,6 +61,23 @@ export function ManualInputSection({
     setModels(updatedModels);
   };
 
+  const validateModelPrice = (id: string, value: string) => {
+    const updatedModels = models.map((model) => {
+      if (model.id === id) {
+        let priceError: string | null = null;
+        if (value) {
+          const numberValue = parseFloat(value);
+          if (isNaN(numberValue) || numberValue <= 0) {
+            priceError = "請輸入大於0的數字";
+          }
+        }
+        return { ...model, price: value, priceError };
+      }
+      return model;
+    });
+    setModels(updatedModels);
+  };
+
   const validatePrice = (value: string) => {
     setPrice(value);
 
@@ -91,7 +111,14 @@ export function ManualInputSection({
     const newId = `model-${Date.now()}`;
     setModels([
       ...models,
-      { id: newId, modelName: trimmedModelName, quantity: "", error: null },
+      {
+        id: newId,
+        modelName: trimmedModelName,
+        quantity: "",
+        error: null,
+        price: "",
+        priceError: null,
+      },
     ]);
     setModelName("");
     setModelNameError(null);
@@ -101,7 +128,90 @@ export function ManualInputSection({
     setModels(models.filter((model) => model.id !== id));
   };
 
+  // Helper: validate all models
+  function validateModels(type: string) {
+    let hasError = false;
+    const updatedModels = models.map((model) => {
+      let error = model.error;
+      let priceError = model.priceError;
+      // Always validate quantity
+      if (!model.quantity || parseInt(model.quantity, 10) <= 0) {
+        error = "請輸入正整數";
+        hasError = true;
+      }
+      // Only validate price in 'order' mode
+      if (type === "order" && (!model.price || parseFloat(model.price) <= 0)) {
+        priceError = "請輸入大於0的數字";
+        hasError = true;
+      }
+      return { ...model, error, priceError };
+    });
+    setModels(updatedModels);
+    return hasError;
+  }
+
+  // Helper: reset all input fields
+  function resetForm() {
+    setProductName("");
+    setModelName("");
+    setModels([]);
+  }
+
   const handleSubmit = async () => {
+    // 驗證商品名稱
+    if (!productName.trim()) {
+      toast.error("請輸入商品名稱");
+      return;
+    }
+    // 驗證 models
+    const hasError = validateModels(manualImportType || "");
+    if (hasError) {
+      toast.error(
+        manualImportType === "order"
+          ? "請檢查所有規格的數量與價格"
+          : "請檢查所有規格的數量"
+      );
+      return;
+    }
+    if (manualImportType === "order") {
+      try {
+        const items = await Promise.all(
+          models.map(async (model) => {
+            const { product_id, model_id } = await getProductAndModelIdByName(
+              productName,
+              model.modelName
+            );
+            return {
+              product_id,
+              model_id,
+              quantity: parseInt(model.quantity, 10),
+              returned_quantity: 0,
+              sold_price: parseFloat(model.price),
+              total_price:
+                parseFloat(model.price) * parseInt(model.quantity, 10),
+            };
+          })
+        );
+        // buyer_id 先用 1 (可根據實際需求調整)
+        await createOrder({
+          buyer_id: 1,
+          product_total_price: items.reduce(
+            (sum, item) => sum + item.total_price,
+            0
+          ),
+          shipping_fee: 0,
+          total_paid: items.reduce((sum, item) => sum + item.total_price, 0),
+          order_status: "pending",
+          items,
+        });
+        toast.success("成功建立訂單");
+      } catch (error) {
+        toast.error(`發生錯誤，請稍後再試: ${error}`);
+      }
+      resetForm();
+      return;
+    }
+    // 非 order 模式，維持原本 upsertStockRecord 行為
     try {
       await Promise.all(
         models.map(async (model) => {
@@ -109,9 +219,7 @@ export function ManualInputSection({
             productName,
             model.modelName
           );
-
           await upsertStockRecord(model_id, true, parseInt(model.quantity, 10));
-
           toast.success(
             `成功新增商品: ${productName} 規格: ${model.modelName} 數量: ${model.quantity}`
           );
@@ -120,11 +228,7 @@ export function ManualInputSection({
     } catch (error) {
       toast.error(`發生錯誤，請稍後再試: ${error}`);
     }
-
-    setProductName("");
-    setModelName("");
-    setModels([]);
-    setPrice("");
+    resetForm();
   };
 
   return (
@@ -136,28 +240,28 @@ export function ManualInputSection({
             <div className="flex items-center">
               <Input
                 type="radio"
-                id="batch-manual"
+                id="order-manual"
                 name="import-type-right"
-                value="batch"
+                value="order"
                 className="h-4 w-4"
                 onChange={onManualImportTypeChange}
-                checked={manualImportType === "batch"}
+                checked={manualImportType === "order"}
               />
-              <Label htmlFor="batch-manual" className="ml-2">
+              <Label htmlFor="order-manual" className="ml-2">
                 銷售匯入
               </Label>
             </div>
             <div className="flex items-center">
               <Input
                 type="radio"
-                id="single-manual"
+                id="inventory-manual"
                 name="import-type-right"
-                value="single"
+                value="inventory"
                 className="h-4 w-4"
                 onChange={onManualImportTypeChange}
-                checked={manualImportType === "single"}
+                checked={manualImportType === "inventory"}
               />
-              <Label htmlFor="single-manual" className="ml-2">
+              <Label htmlFor="inventory-manual" className="ml-2">
                 庫存匯入
               </Label>
             </div>
@@ -227,15 +331,22 @@ export function ManualInputSection({
             <div className="rounded-lg border p-4">
               {models.length > 0 && (
                 <div className="space-y-3 mt-2">
-                  <div className="grid grid-cols-5 gap-2 text-sm text-muted-foreground font-medium">
+                  <div className="grid grid-cols-7 gap-2 text-sm text-muted-foreground font-medium">
                     <div className="col-span-2">規格名稱</div>
                     <div className="col-span-2">數量</div>
+                    <div
+                      className="col-span-2"
+                      hidden={manualImportType !== "order"}
+                    >
+                      價格
+                    </div>
+                    <div className="col-span-1 text-center" />
                   </div>
 
                   {models.map((model) => (
                     <div
                       key={model.id}
-                      className="grid grid-cols-5 gap-2 items-center"
+                      className="grid grid-cols-7 gap-2 items-center"
                     >
                       <div className="col-span-2 text-sm">
                         {model.modelName}
@@ -257,7 +368,31 @@ export function ManualInputSection({
                           </p>
                         )}
                       </div>
-                      <div className="col-span-1 flex justify-end">
+                      <div className="col-span-2">
+                        {manualImportType === "order" && (
+                          <>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="價格"
+                              value={model.price}
+                              onChange={(e) =>
+                                validateModelPrice(model.id, e.target.value)
+                              }
+                              className={
+                                model.priceError ? "border-red-500" : ""
+                              }
+                            />
+                            {model.priceError && (
+                              <p className="text-sm text-red-500 mt-1">
+                                {model.priceError}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="col-span-1 flex justify-center">
                         <Button
                           type="button"
                           variant="ghost"
@@ -294,7 +429,7 @@ export function ManualInputSection({
               )}
             </div>
 
-            {manualImportType !== "single" && (
+            {manualImportType !== "inventory" && (
               <div className="grid gap-1.5">
                 <Label htmlFor="price">價格</Label>
                 <Input

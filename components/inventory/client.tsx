@@ -77,7 +77,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
       ...item,
       supplier_name: item.supplier_name || "未知廠商",
       remaining_days: item.remaining_days || 0,
-      is_ordered: item.is_ordered !== undefined ? item.is_ordered : false,
+      has_recent_purchase:
+        item.has_recent_purchase !== undefined
+          ? item.has_recent_purchase
+          : false,
     }));
 
     if (searchQuery) {
@@ -104,8 +107,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
     if (orderStatusFilter !== "所有狀態") {
       filteredData = filteredData.filter((item) => {
-        if (orderStatusFilter === "已叫貨") return item.is_ordered === true;
-        if (orderStatusFilter === "未叫貨") return item.is_ordered === false;
+        if (orderStatusFilter === "已叫貨")
+          return item.has_recent_purchase === true;
+        if (orderStatusFilter === "未叫貨")
+          return item.has_recent_purchase === false;
         return true;
       });
     }

@@ -40,7 +40,7 @@ export type InventoryDashboardRow = {
   supplier_name: string;
   supplier_id: number;
   remaining_days: number;
-  is_ordered: boolean;
+  has_recent_purchase: boolean;
 };
 
 // 用於我的叫貨

@@ -10,6 +10,8 @@ import { InventorySummary } from "./inventory-summary";
 import { InventoryFilterBar } from "./inventory-filter-bar";
 import { InventoryTable } from "./inventory-table";
 import { InventoryStatusExplanation } from "./inventory-status-explanation";
+import { deleteProductModels } from "@/actions/models";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 interface InventoryClientProps {
   initialInventory: InventoryDashboardRow[];
@@ -33,6 +35,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     new Set()
   );
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   const handleInventoryImport = () => {
     router.push("/upload?type=inventory");
@@ -182,9 +185,13 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     );
   };
 
-  const handleBulkDelete = () => {
-    alert(`已選擇 ${selectedItems.size} 個項目準備刪除`);
+  const handleBulkDelete = async () => {
+    const modelIds = Array.from(selectedItems).map((item) =>
+      parseInt(item.split("-")[1])
+    );
+    await deleteProductModels(modelIds);
     setSelectedItems(new Set());
+    router.refresh();
   };
 
   const hasActiveFilters =
@@ -210,7 +217,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
             onOrderStatusFilterChange={handleOrderStatusFilter}
             selectedItemsCount={selectedItems.size}
             onBulkOrder={() => setIsDialogOpen(true)}
-            onBulkDelete={handleBulkDelete}
+            onBulkDelete={() => setIsDeleteDialogOpen(true)}
             onClearAllFilters={clearAllFilters}
             hasActiveFilters={hasActiveFilters}
           />
@@ -232,6 +239,12 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           selectedItems={isDialogOpen ? getSelectedItemsData() : []}
+        />
+        <DeleteConfirmationDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={handleBulkDelete}
+          itemCount={selectedItems.size}
         />
       </div>
     </div>

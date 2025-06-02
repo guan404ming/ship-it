@@ -28,6 +28,7 @@ import { PurchaseImportDialog } from "@/components/purchase-import/purchase-impo
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { PurchaseDashboardRow } from "@/lib/types";
 import { formatDate } from "@/lib/date-utils";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 interface PurchaseTempClientProps {
   initialPurchase: PurchaseDashboardRow[];
@@ -47,6 +48,7 @@ export default function PurchaseClient({
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
     "asc"
   );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   const handlePurchaseOrderImport = () => {
     setIsDialogOpen(true);
@@ -150,13 +152,10 @@ export default function PurchaseClient({
   };
 
   // Handle bulk delete
-  const handleBulkDelete = () => {
-    // Placeholder for future implementation
-    console.log("以下項目將被刪除:", getSelectedItemsData());
-    alert(`已選擇 ${selectedItemsCount} 個項目準備刪除`);
-
-    // Here you would implement the actual delete logic in a real application
-    // For now, just clear the selection
+  const handleBulkDelete = async () => {
+    const selectedItems = getSelectedItemsData();
+    // Implement your delete logic here
+    console.log("以下項目將被刪除:", selectedItems);
     setSelectedRows({});
   };
 
@@ -251,7 +250,7 @@ export default function PurchaseClient({
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={handleBulkDelete}
+                    onClick={() => setIsDeleteDialogOpen(true)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     刪除 ({selectedItemsCount})
@@ -359,6 +358,13 @@ export default function PurchaseClient({
           </div>
         </div>
       </div>
+
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleBulkDelete}
+        itemCount={selectedItemsCount}
+      />
     </div>
   );
 }

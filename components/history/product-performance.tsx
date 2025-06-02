@@ -112,8 +112,8 @@ export function ProductPerformance({
 
   // 計算日期範圍
   const getDateRange = React.useCallback(() => {
-    const now = dayjs().toDate();
-    return getDateRangeUtil(timeRange, customDateRange, now);
+    const now = dayjs();
+    return getDateRangeUtil(timeRange, customDateRange, now.toDate());
   }, [timeRange, customDateRange]);
 
   // 合併相同日期的數據
@@ -121,15 +121,23 @@ export function ProductPerformance({
     if (selectedProducts.length === 0) return [];
 
     const { startDate, endDate } = getDateRange();
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
 
     return groupedProductsData
       .filter((product) =>
         selectedProducts.includes(product.product_id.toString())
       )
       .map((product) => {
+        // 用 dayjs 處理日期過濾
+        const filteredData = getProductDateRangeData(
+          product,
+          start.toDate(),
+          end.toDate()
+        );
         return {
           ...product,
-          filteredData: getProductDateRangeData(product, startDate, endDate),
+          filteredData,
         };
       });
   }, [selectedProducts, groupedProductsData, getDateRange]);
@@ -161,6 +169,8 @@ export function ProductPerformance({
   // 處理和排序產品數據
   const processedAndSortedProducts = React.useMemo(() => {
     const { startDate, endDate } = getDateRange();
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
 
     // 處理數據並計算總和和成長率
     const processedProducts = groupedProductsData
@@ -173,8 +183,12 @@ export function ProductPerformance({
         return true;
       })
       .map((product) => {
-        // 計算所選時間範圍內商品所有規格的數據總和
-        const salesData = getProductDateRangeData(product, startDate, endDate);
+        // 用 dayjs 處理日期過濾
+        const salesData = getProductDateRangeData(
+          product,
+          start.toDate(),
+          end.toDate()
+        );
         const totalQuantity = salesData.reduce(
           (sum, item) => sum + item.quantity,
           0
@@ -184,11 +198,12 @@ export function ProductPerformance({
           0
         );
 
-        // 使用工具函數計算成長率
+        // 使用工具函數計算成長率，referenceDate 用 endDate
         const { quantityGrowth, amountGrowth } = calculateProductGrowthRates(
           product,
           timeRange,
-          customDateRange
+          customDateRange,
+          end.toDate()
         );
 
         return {

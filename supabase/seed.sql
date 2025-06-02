@@ -81,7 +81,7 @@ INSERT INTO purchase_items (batch_id, model_id, quantity, unit_cost, note) VALUE
 (3, 8, 20, 1000.00, 'Initial stock order'),
 (3, 9, 35, 700.00, 'Regular stock replenishment');
 
--- Insert historical orders (last 30 days, 3 orders per day)
+-- Insert historical orders (last 180 days, 3 orders per day)
 DO $$
 DECLARE
   d integer;
@@ -93,10 +93,11 @@ DECLARE
   q integer;
   price numeric;
   total numeric;
+  base_date timestamp := NOW();
 BEGIN
-  FOR d IN 1..30 LOOP
+  FOR d IN 1..360 LOOP
     FOR o IN 1..3 LOOP
-      order_id := 'ORD' || to_char(d, 'FM00') || to_char(o, 'FM0');
+      order_id := 'ORD' || to_char(d, 'FM000') || to_char(o, 'FM0');
       buyer_id := ((o + d) % 3) + 1;
       INSERT INTO orders (order_id, buyer_id, product_total_price, shipping_fee, total_paid, order_status, created_at, payment_time, shipped_at, completed_at)
       VALUES (
@@ -106,10 +107,10 @@ BEGIN
         15.00,
         1015 + d * 10 + o * 5,
         'delivered',
-        NOW() - (d || ' days')::interval,
-        NOW() - (d || ' days 23 hours')::interval,
-        NOW() - (d || ' days 22 hours')::interval,
-        NOW() - (d || ' days 21 hours')::interval
+        base_date - (d || ' days')::interval,
+        base_date - (d || ' days 23 hours')::interval,
+        base_date - (d || ' days 22 hours')::interval,
+        base_date - (d || ' days 21 hours')::interval
       );
       -- 每張訂單隨機 2~4 個商品型號
       FOR q IN 1..((o % 3) + 2) LOOP

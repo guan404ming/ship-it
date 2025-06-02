@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 
 /**
- * 日期和成長率計算相關的工具函數
+ * 日期和成長率計算相關的工具函數 (全部用 dayjs 處理)
  */
 
 /**
@@ -33,9 +33,9 @@ export function getCustomDateRangeDays(
 
   // 如果是自定義區間，計算實際天數
   if (timeRange === "custom" && customDateRange) {
-    const start = new Date(customDateRange.start);
-    const end = new Date(customDateRange.end);
-    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const start = dayjs(customDateRange.start);
+    const end = dayjs(customDateRange.end);
+    return end.diff(start, "day");
   }
 
   return baseDays;
@@ -49,20 +49,19 @@ export function getDateRange(
   customDateRange: { start: string; end: string } | null,
   referenceDate: Date = dayjs().toDate()
 ): { startDate: Date; endDate: Date } {
-  const now = new Date(referenceDate);
-  let startDate: Date;
-  let endDate = new Date(now);
+  const now = dayjs(referenceDate);
+  let startDate: dayjs.Dayjs;
+  let endDate = now;
 
   if (customDateRange) {
-    startDate = new Date(customDateRange.start);
-    endDate = new Date(customDateRange.end);
+    startDate = dayjs(customDateRange.start);
+    endDate = dayjs(customDateRange.end);
   } else {
     const daysToSubtract = getDaysFromTimeRange(timeRange);
-    startDate = new Date(now);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
+    startDate = now.subtract(daysToSubtract, "day");
   }
 
-  return { startDate, endDate };
+  return { startDate: startDate.toDate(), endDate: endDate.toDate() };
 }
 
 /**
@@ -78,25 +77,22 @@ export function getGrowthComparisonPeriods(
   previousPeriodStart: Date;
   previousPeriodEnd: Date;
 } {
-  const now = new Date(referenceDate);
+  const now = dayjs(referenceDate);
   const daysDiff = getCustomDateRangeDays(timeRange, customDateRange);
 
   // 當前區間
-  const currentPeriodStart = new Date(now);
-  currentPeriodStart.setDate(currentPeriodStart.getDate() - daysDiff);
-  const currentPeriodEnd = new Date(now);
+  const currentPeriodEnd = now;
+  const currentPeriodStart = now.subtract(daysDiff, "day");
 
   // 前一個區間
-  const previousPeriodEnd = new Date(currentPeriodStart);
-  previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 1);
-  const previousPeriodStart = new Date(previousPeriodEnd);
-  previousPeriodStart.setDate(previousPeriodStart.getDate() - daysDiff);
+  const previousPeriodEnd = currentPeriodStart.subtract(1, "day");
+  const previousPeriodStart = previousPeriodEnd.subtract(daysDiff, "day");
 
   return {
-    currentPeriodStart,
-    currentPeriodEnd,
-    previousPeriodStart,
-    previousPeriodEnd,
+    currentPeriodStart: currentPeriodStart.toDate(),
+    currentPeriodEnd: currentPeriodEnd.toDate(),
+    previousPeriodStart: previousPeriodStart.toDate(),
+    previousPeriodEnd: previousPeriodEnd.toDate(),
   };
 }
 
@@ -121,9 +117,14 @@ export function filterDataByDateRange<T extends { date: string }>(
   startDate: Date,
   endDate: Date
 ): T[] {
+  const start = dayjs(startDate);
+  const end = dayjs(endDate);
   return data.filter((item) => {
-    const itemDate = new Date(item.date);
-    return itemDate >= startDate && itemDate <= endDate;
+    const itemDate = dayjs(item.date);
+    return (
+      (itemDate.isSame(start, "day") || itemDate.isAfter(start, "day")) &&
+      (itemDate.isSame(end, "day") || itemDate.isBefore(end, "day"))
+    );
   });
 }
 

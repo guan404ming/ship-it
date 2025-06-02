@@ -21,11 +21,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { RankingProduct } from "@/lib/types";
+import { GroupedProductSales, RankingProduct } from "@/lib/types";
+import { calculateProductModelGrowthRates } from "@/lib/product-utils";
+import { GrowthCell } from "@/components/ui/growth-cell";
 import dayjs from "dayjs";
 
 interface SalesRankingProps {
-  productRankingData: RankingProduct[];
+  productSalesData: GroupedProductSales[];
 }
 
 interface AggregatedProduct {
@@ -39,7 +41,7 @@ interface AggregatedProduct {
   specifications: number;
 }
 
-export function SalesRankings({ productRankingData }: SalesRankingProps) {
+export function SalesRankings({ productSalesData }: SalesRankingProps) {
   const [timeRange, setTimeRange] = React.useState("90d");
   const [rankingMetric, setRankingMetric] = React.useState<
     "sales" | "quantity"
@@ -48,6 +50,39 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
     start: string;
     end: string;
   } | null>(null);
+
+  // 先將所有 model 攤平成 RankingProduct 並計算 growth
+  const productRankingData: RankingProduct[] = React.useMemo(() => {
+    const arr: RankingProduct[] = [];
+    (productSalesData ?? []).forEach((product) => {
+      product.models.forEach((model) => {
+        const { quantityGrowth, amountGrowth } =
+          calculateProductModelGrowthRates(
+            model,
+            timeRange,
+            customDateRange,
+            customDateRange?.end
+              ? dayjs(customDateRange.end).toDate()
+              : dayjs().toDate()
+          );
+        arr.push({
+          product_id: product.product_id,
+          product_name: product.product_name,
+          listed_date: product.listed_date,
+          status: product.status,
+          model_id: model.model_id,
+          model_name: model.model_name || "",
+          original_price: model.original_price || 0,
+          promo_price: model.promo_price || 0,
+          created_at: model.created_at || "",
+          sales: model.data.reduce((sum, d) => sum + d.amount, 0),
+          quantity: model.data.reduce((sum, d) => sum + d.quantity, 0),
+          growth: rankingMetric === "sales" ? amountGrowth : quantityGrowth,
+        });
+      });
+    });
+    return arr;
+  }, [productSalesData, timeRange, customDateRange, rankingMetric]);
 
   // 聚合相同產品的不同型號
   const aggregatedData = React.useMemo(() => {
@@ -136,12 +171,14 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                   setCustomDateRange(null);
                 } else if (value === "custom" && !customDateRange) {
                   // 設定自定義範圍的默認值
-                  const now = dayjs().toDate();
-                  const startDate = dayjs().subtract(30, "day").toDate();
+                  const now = dayjs().format("YYYY-MM-DD");
+                  const startDate = dayjs()
+                    .subtract(30, "day")
+                    .format("YYYY-MM-DD");
 
                   setCustomDateRange({
-                    start: startDate.toISOString().split("T")[0],
-                    end: now.toISOString().split("T")[0],
+                    start: startDate,
+                    end: now,
                   });
                 }
               }}
@@ -172,7 +209,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                   onChange={(e) =>
                     setCustomDateRange((prev) => ({
                       start: e.target.value,
-                      end: prev?.end || new Date().toISOString().split("T")[0],
+                      end: prev?.end || dayjs().format("YYYY-MM-DD"),
                     }))
                   }
                 />
@@ -183,7 +220,9 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                   value={customDateRange?.end || ""}
                   onChange={(e) =>
                     setCustomDateRange((prev) => ({
-                      start: prev?.start || "2024-01-01",
+                      start:
+                        prev?.start ||
+                        dayjs().subtract(30, "day").format("YYYY-MM-DD"),
                       end: e.target.value,
                     }))
                   }
@@ -242,19 +281,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                         : product.quantity.toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      {product.growth !== undefined &&
-                        product.growth !== null && (
-                          <span
-                            className={
-                              product.growth >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }
-                          >
-                            {product.growth >= 0 ? "↑" : "↓"}{" "}
-                            {Math.abs(product.growth)}%
-                          </span>
-                        )}
+                      <GrowthCell growth={product.growth} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -296,19 +323,7 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                         : product.quantity.toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      {product.growth !== undefined &&
-                        product.growth !== null && (
-                          <span
-                            className={
-                              product.growth >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }
-                          >
-                            {product.growth >= 0 ? "↑" : "↓"}{" "}
-                            {Math.abs(product.growth)}%
-                          </span>
-                        )}
+                      <GrowthCell growth={product.growth} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -347,8 +362,8 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                         ? `$${product.sales.toLocaleString()}`
                         : product.quantity.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-green-600">
-                      ↑ {Math.abs(product.growth || 0)}%
+                    <TableCell>
+                      <GrowthCell growth={product.growth} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -387,8 +402,8 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                         ? `$${product.sales.toLocaleString()}`
                         : product.quantity.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-red-600">
-                      ↓ {Math.abs(product.growth || 0)}%
+                    <TableCell>
+                      <GrowthCell growth={product.growth} />
                     </TableCell>
                   </TableRow>
                 ))}

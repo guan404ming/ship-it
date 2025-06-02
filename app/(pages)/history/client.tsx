@@ -7,11 +7,10 @@ import { getHistoryData } from "@/actions/stats";
 import dayjs from "dayjs";
 
 export default async function HistoryClient() {
-  const { salesData, productSalesData, productRankingData } =
-    await getHistoryData(
-      dayjs().subtract(180, "day").format("YYYY-MM-DD"),
-      dayjs().format("YYYY-MM-DD")
-    );
+  const { salesData, productSalesData } = await getHistoryData(
+    dayjs().subtract(180, "day").format("YYYY-MM-DD"),
+    dayjs().format("YYYY-MM-DD")
+  );
 
   return (
     <div className="flex flex-1 flex-col h-full w-full">
@@ -37,7 +36,7 @@ export default async function HistoryClient() {
             </TabsContent>
 
             <TabsContent value="rankings" className="mt-4">
-              <SalesRankings productRankingData={productRankingData} />
+              <SalesRankings productSalesData={productSalesData} />
             </TabsContent>
           </Tabs>
         </div>

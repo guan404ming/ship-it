@@ -38,6 +38,7 @@ import { getDateRange as getDateRangeUtil } from "@/lib/date-utils";
 import { calculateProductModelGrowthRates } from "@/lib/product-utils";
 import { ProductSalesModel } from "@/lib/types";
 import dayjs from "dayjs";
+import { GrowthCell } from "@/components/ui/growth-cell";
 
 interface ProductDetailProps {
   open: boolean;
@@ -58,6 +59,17 @@ const chartConfig = {
     color: "hsl(173, 58%, 39%)",
   },
 } satisfies ChartConfig;
+
+function getDateList(start: string, end: string): string[] {
+  const dates: string[] = [];
+  let current = dayjs(start);
+  const last = dayjs(end);
+  while (current.isBefore(last.add(1, "day"), "day")) {
+    dates.push(current.format("YYYY-MM-DD"));
+    current = current.add(1, "day");
+  }
+  return dates;
+}
 
 export function ProductDetailDialog({
   open,
@@ -88,6 +100,25 @@ export function ProductDetailDialog({
     const now = dayjs().toDate();
     return getDateRangeUtil(timeRange, customDateRange, now);
   }, [timeRange, customDateRange]);
+
+  // 在圖表渲染前，補齊每個型號的資料
+  const { startDate, endDate } = getDateRange();
+  const dateList = getDateList(
+    startDate.toISOString().split("T")[0],
+    endDate.toISOString().split("T")[0]
+  );
+  const filledModels = models.map((model) => {
+    const filtered = model.data.filter((item) => {
+      const date = new Date(item.date);
+      return date >= startDate && date <= endDate;
+    });
+    // 補齊所有日期
+    const filledData = dateList.map((date) => {
+      const found = filtered.find((d) => d.date === date);
+      return found ? found : { date, amount: 0, quantity: 0 };
+    });
+    return { ...model, data: filledData };
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,18 +263,11 @@ export function ProductDetailDialog({
                       }
                     />
                     <Legend />
-                    {models
+                    {filledModels
                       .filter((model) =>
                         selectedModels.includes(model.model_id)
                       )
                       .map((model, index) => {
-                        const { startDate, endDate } = getDateRange();
-
-                        const filteredData = model.data.filter((item) => {
-                          const date = new Date(item.date);
-                          return date >= startDate && date <= endDate;
-                        });
-
                         const colors = [
                           "#ff6b6b",
                           "#4ecdc4",
@@ -255,16 +279,16 @@ export function ProductDetailDialog({
                           "#748ffc",
                         ];
                         const color = colors[index % colors.length];
-
                         return (
                           <Line
                             key={`${model.model_id}-${chartType}`}
-                            data={filteredData}
+                            data={model.data}
                             type="monotone"
                             dataKey={chartType}
                             stroke={color}
                             name={model.model_name || "未知規格"}
                             strokeWidth={2}
+                            dot={false}
                           />
                         );
                       })}
@@ -363,27 +387,13 @@ export function ProductDetailDialog({
                             {totalQuantity}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {quantityGrowth !== undefined && (
-                              <span
-                                className={`${quantityGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {quantityGrowth >= 0 ? "↑" : "↓"}{" "}
-                                {Math.abs(quantityGrowth)}%
-                              </span>
-                            )}
+                            <GrowthCell growth={quantityGrowth} />
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             $ {totalAmount.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {amountGrowth !== undefined && (
-                              <span
-                                className={`${amountGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
-                              >
-                                {amountGrowth >= 0 ? "↑" : "↓"}{" "}
-                                {Math.abs(amountGrowth)}%
-                              </span>
-                            )}
+                            <GrowthCell growth={amountGrowth} />
                           </TableCell>
                         </TableRow>
                       );

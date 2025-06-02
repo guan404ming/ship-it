@@ -5,11 +5,69 @@ import { cookies } from "next/headers";
 
 import { OrderStatus } from "@/lib/types";
 
+// Type for order input (extends the base Order type with custom fields)
+type OrderInput = {
+  order_id: string
+  buyer_id: number
+  product_total_price: number
+  shipping_fee: number
+  total_paid: number
+  order_status: OrderStatus
+  payment_time?: string
+  shipped_at?: string
+  completed_at?: string
+  items: Array<{
+    product_id: number
+    model_id: number
+    quantity: number
+    returned_quantity: number
+    sold_price: number
+    total_price: number
+  }>
+}
+
 interface OrderUpdateData {
   order_status: OrderStatus;
   shipped_at?: string;
   completed_at?: string;
   cancel_reason?: string;
+}
+
+export async function createOrderFromInput(input: OrderInput) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  try {
+    // Destructure to separate items from order data
+    const { items, ...orderData } = input;
+    
+    // Insert order using spread syntax for cleaner code
+    const { error: orderError } = await supabase.from('orders').insert({
+      ...orderData,
+      created_at: new Date().toISOString(),
+      payment_time: orderData.payment_time ?? null,
+      shipped_at: orderData.shipped_at ?? null,
+      completed_at: orderData.completed_at ?? null,
+    })
+    if (orderError) throw orderError
+
+    // Insert order items using spread syntax
+    const orderItems = items.map(item => ({
+      ...item,
+      order_id: input.order_id
+    }))
+
+    const { error: orderItemsError } = await supabase.from('order_items').insert(orderItems)
+    if (orderItemsError) throw orderItemsError
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating order:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
 }
 
 export async function createOrder(
@@ -48,6 +106,7 @@ export async function createOrder(
 
   if (orderError) throw orderError;
 
+  // Use spread syntax for cleaner mapping
   const orderItems = items.map((item) => ({
     order_id: order.order_id,
     product_id: item.productId,
@@ -55,6 +114,7 @@ export async function createOrder(
     quantity: item.quantity,
     sold_price: item.soldPrice,
     total_price: item.soldPrice * item.quantity,
+    returned_quantity: 0, // Default value
   }));
 
   const { error: itemsError } = await supabase

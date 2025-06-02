@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { getProductAndModelIdByName } from "@/actions/products";
+import { toast } from "sonner";
+import { upsertStockRecord } from "@/actions/stock_record";
 
 interface Model {
   id: string;
@@ -97,6 +99,32 @@ export function ManualInputSection({
 
   const removeModel = (id: string) => {
     setModels(models.filter((model) => model.id !== id));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      await Promise.all(
+        models.map(async (model) => {
+          const { model_id } = await getProductAndModelIdByName(
+            productName,
+            model.modelName
+          );
+
+          await upsertStockRecord(model_id, true, parseInt(model.quantity, 10));
+
+          toast.success(
+            `成功新增商品: ${productName} 規格: ${model.modelName} 數量: ${model.quantity}`
+          );
+        })
+      );
+    } catch (error) {
+      toast.error(`發生錯誤，請稍後再試: ${error}`);
+    }
+
+    setProductName("");
+    setModelName("");
+    setModels([]);
+    setPrice("");
   };
 
   return (
@@ -283,15 +311,7 @@ export function ManualInputSection({
             )}
           </div>
 
-          <div className="text-sm text-gray-500">
-            <h4 className="font-medium">備註</h4>
-            <Textarea
-              placeholder="請輸入此次匯入的相關資訊..."
-              className="mt-2"
-            />
-          </div>
-
-          <Button className="w-full" type="submit">
+          <Button className="w-full" type="submit" onClick={handleSubmit}>
             確認輸入
           </Button>
         </div>

@@ -1,3 +1,5 @@
+"use server";
+
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
@@ -9,13 +11,11 @@ export async function upsertStockRecord(
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: stock_record, error: stock_record_error } = await supabase
+  const { data: stock_record } = await supabase
     .from("stock_records")
     .select("stock_quantity")
     .eq("model_id", model_id)
     .single();
-
-  if (stock_record_error) throw stock_record_error;
 
   if (!stock_record?.stock_quantity) {
     const { error: new_stock_record_error } = await supabase

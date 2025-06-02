@@ -78,7 +78,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
   const filteredAndSortedData = React.useMemo(() => {
     let filteredData = [...initialInventory].map((item) => ({
       ...item,
-      supplier_name: item.supplier_name || "未知廠商",
+      supplier_name: item.supplier_name || "手動匯入",
       remaining_days: item.remaining_days || 0,
       has_active_purchase:
         item.has_active_purchase !== undefined

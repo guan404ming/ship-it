@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import type { PurchaseDashboardRow, PurchaseFormData } from "@/lib/types";
+import { updateStockRecord } from "./stock_record";
 
 export async function createPurchaseBatch(
   supplierId: number,
@@ -147,6 +148,22 @@ export async function updatePurchaseBatchStatus(
         .from("purchase_batches")
         .update({ status })
         .eq("batch_id", batchId);
+
+      if (status === "confirmed") {
+        // get the purchase items
+        const { data: purchaseItems, error: purchaseItemsError } =
+          await supabase
+            .from("purchase_items")
+            .select("*")
+            .eq("batch_id", batchId);
+
+        if (purchaseItemsError) throw purchaseItemsError;
+
+        // update stock_quantity
+        for (const item of purchaseItems) {
+          await updateStockRecord(item.model_id, true, item.quantity);
+        }
+      }
 
       if (batchError) {
         console.error("Failed to update batch status:", batchError);

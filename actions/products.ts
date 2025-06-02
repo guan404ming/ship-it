@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { createModel } from "./models";
 
 export async function getProducts() {
   const cookieStore = cookies();
@@ -16,31 +17,64 @@ export async function getProducts() {
   return data;
 }
 
-export async function getProductAndModelIdByNames(
-  productName: string,
-  modelName: string
-): Promise<{ product_id: number; model_id: number } | null> {
+export async function createProduct(productName: string) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  // get product_id
-  const { data: product, error: productError } = await supabase
+  const { data: newProduct, error: createProductError } = await supabase
+    .from("products")
+    .insert([
+      {
+        product_name: productName,
+        listed_date: new Date().toISOString(),
+        status: "active",
+      },
+    ])
+    .select("product_id")
+    .single();
+
+  if (createProductError || !newProduct) {
+    throw new Error(
+      `Failed to create product, error: ${createProductError?.message}`
+    );
+  }
+
+  return newProduct;
+}
+
+export async function getProductAndModelIdByNames(
+  productName: string,
+  modelName: string
+): Promise<{ product_id: number; model_id: number }> {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  // get or create product_id
+  let { data: product } = await supabase
     .from("products")
     .select("product_id")
     .eq("product_name", productName)
     .single();
 
-  if (productError || !product) return null;
+  if (!product) {
+    product = await createProduct(productName);
+  }
 
-  // get model_id
-  const { data: model, error: modelError } = await supabase
+  // get or create model_id
+  let { data: model } = await supabase
     .from("product_models")
     .select("model_id")
     .eq("model_name", modelName)
     .eq("product_id", product.product_id)
     .single();
 
-  if (modelError || !model) return null;
+  if (!model) {
+    model = await createModel(modelName, product.product_id);
+  }
+
+  if (!model) {
+    throw new Error("Failed to get or create model");
+  }
 
   return {
     product_id: product.product_id,

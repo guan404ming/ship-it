@@ -117,17 +117,12 @@ export function PurchaseImportDialog({
       const itemsForBatch = await Promise.all(
         items.flatMap((item) =>
           item.models.map(async (model) => {
-            const ids = await getProductAndModelIdByNames(
+            const { model_id } = await getProductAndModelIdByNames(
               item.product_name,
               model.name
             );
-            if (!ids) {
-              throw new Error(
-                `找不到 ${item.product_name} - ${model.name} 對應的資料`
-              );
-            }
             return {
-              model_id: ids.model_id,
+              model_id,
               quantity: model.quantity,
               note: item.note ?? null,
             };

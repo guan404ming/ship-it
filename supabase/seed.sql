@@ -20,36 +20,36 @@ ALTER SEQUENCE IF EXISTS purchase_items_item_id_seq RESTART WITH 1;
 ALTER SEQUENCE IF EXISTS order_items_item_id_seq RESTART WITH 1;
 
 -- Insert sample suppliers
-INSERT INTO suppliers (supplier_id, supplier_name, contact_info, created_at) VALUES
-(1, 'Apple Supplier Co.', 'contact@applesupplier.com', NOW()),
-(2, 'Samsung Electronics', 'sales@samsungelectronics.com', NOW()),
-(3, 'Google Devices Inc.', 'info@googledevices.com', NOW());
+INSERT INTO suppliers (supplier_name, contact_info, created_at) VALUES
+('Apple Supplier Co.', 'contact@applesupplier.com', NOW()),
+('Samsung Electronics', 'sales@samsungelectronics.com', NOW()),
+('Google Devices Inc.', 'info@googledevices.com', NOW());
 
 -- Insert sample buyers
-INSERT INTO buyers (buyer_id, buyer_account) VALUES
-(1, 'buyer1@example.com'),
-(2, 'buyer2@example.com'),
-(3, 'buyer3@example.com');
+INSERT INTO buyers (buyer_account) VALUES
+('buyer1@example.com'),
+('buyer2@example.com'),
+('buyer3@example.com');
 
 -- Insert sample products
-INSERT INTO products (product_id, product_name, listed_date, status) VALUES
-(1, 'MacBook Pro', '2024-01-01', 'active'),
-(2, 'iPhone 15', '2024-01-01', 'active'),
-(3, 'Galaxy Buds', '2024-01-01', 'active'),
-(4, 'Galaxy Watch', '2024-02-01', 'active'),
-(5, 'Pixel Tablet', '2024-02-15', 'active');
+INSERT INTO products (product_name, listed_date, status) VALUES
+('MacBook Pro', '2024-01-01', 'active'),
+('iPhone 15', '2024-01-01', 'active'),
+('Galaxy Buds', '2024-01-01', 'active'),
+('Galaxy Watch', '2024-02-01', 'active'),
+('Pixel Tablet', '2024-02-15', 'active');
 
 -- Insert sample product models
-INSERT INTO product_models (model_id, product_id, model_name, original_price, promo_price, created_at) VALUES
-(1, 1, 'MacBook Pro 14" M3', 1999.99, 1899.99, '2024-01-01'),
-(2, 1, 'MacBook Pro 16" M3', 2499.99, 2399.99, '2024-01-01'),
-(3, 2, 'iPhone 15 Pro', 999.99, 949.99, '2024-01-01'),
-(4, 2, 'iPhone 15 Pro Max', 1199.99, 1149.99, '2024-01-01'),
-(5, 3, 'Galaxy Buds Pro 2', 249.99, 229.99, '2024-01-01'),
-(6, 4, 'Galaxy Watch 6', 399.99, 379.99, '2024-02-01'),
-(7, 4, 'Galaxy Watch SE', 279.99, 259.99, '2024-02-01'),
-(8, 5, 'Pixel Tablet Pro', 1099.99, 1049.99, '2024-02-15'),
-(9, 5, 'Pixel Tablet', 799.99, 749.99, '2024-02-15');
+INSERT INTO product_models (product_id, model_name, original_price, promo_price, created_at) VALUES
+(1, 'MacBook Pro 14" M3', 1999.99, 1899.99, '2024-01-01'),
+(1, 'MacBook Pro 16" M3', 2499.99, 2399.99, '2024-01-01'),
+(2, 'iPhone 15 Pro', 999.99, 949.99, '2024-01-01'),
+(2, 'iPhone 15 Pro Max', 1199.99, 1149.99, '2024-01-01'),
+(3, 'Galaxy Buds Pro 2', 249.99, 229.99, '2024-01-01'),
+(4, 'Galaxy Watch 6', 399.99, 379.99, '2024-02-01'),
+(4, 'Galaxy Watch SE', 279.99, 259.99, '2024-02-01'),
+(5, 'Pixel Tablet Pro', 1099.99, 1049.99, '2024-02-15'),
+(5, 'Pixel Tablet', 799.99, 749.99, '2024-02-15');
 
 -- Insert sample stock records
 INSERT INTO stock_records (model_id, stock_quantity, last_updated) VALUES
@@ -186,34 +186,34 @@ INSERT INTO orders (order_id, buyer_id, product_total_price, shipping_fee, total
  NOW() - INTERVAL '173 days');
 
 -- Insert order items with diverse growth patterns
-INSERT INTO order_items (item_id, order_id, product_id, model_id, quantity, returned_quantity, sold_price, total_price) VALUES
+INSERT INTO order_items (order_id, product_id, model_id, quantity, returned_quantity, sold_price, total_price) VALUES
 -- January Orders (30 days ago) - Current Period
-(1, 'ORD001', 1, 1, 5, 0, 1999.99, 9999.95),  -- MacBook Pro 14" (Exponential Growth)
-(2, 'ORD002', 1, 2, 2, 0, 2499.99, 4999.98),  -- MacBook Pro 16" (Seasonal)
-(3, 'ORD003', 2, 3, 8, 0, 999.99, 7999.92),   -- iPhone 15 Pro (Sudden Spike)
+('ORD001', 1, 1, 5, 0, 1999.99, 9999.95),  -- MacBook Pro 14" (Exponential Growth)
+('ORD002', 1, 2, 2, 0, 2499.99, 4999.98),  -- MacBook Pro 16" (Seasonal)
+('ORD003', 2, 3, 8, 0, 999.99, 7999.92),   -- iPhone 15 Pro (Sudden Spike)
 
 -- February Orders (60 days ago) - Previous Period
-(4, 'ORD004', 3, 5, 3, 0, 229.99, 689.97),    -- Galaxy Buds Pro 2 (Steady Decline)
-(5, 'ORD005', 1, 1, 3, 0, 1899.99, 5699.97),  -- MacBook Pro 14" (Previous)
-(6, 'ORD006', 2, 4, 4, 0, 1199.99, 4799.96),  -- iPhone 15 Pro Max (Cyclical)
+('ORD004', 3, 5, 3, 0, 229.99, 689.97),    -- Galaxy Buds Pro 2 (Steady Decline)
+('ORD005', 1, 1, 3, 0, 1899.99, 5699.97),  -- MacBook Pro 14" (Previous)
+('ORD006', 2, 4, 4, 0, 1199.99, 4799.96),  -- iPhone 15 Pro Max (Cyclical)
 
 -- March Orders (90 days ago) - Current Period
-(7, 'ORD007', 4, 6, 6, 0, 399.99, 2399.94),   -- Galaxy Watch 6 (Exponential)
-(8, 'ORD008', 4, 7, 1, 0, 279.99, 279.99),    -- Galaxy Watch SE (Steady Decline)
-(9, 'ORD009', 5, 8, 10, 0, 1099.99, 10999.90), -- Pixel Tablet Pro (Sudden Spike)
+('ORD007', 4, 6, 6, 0, 399.99, 2399.94),   -- Galaxy Watch 6 (Exponential)
+('ORD008', 4, 7, 1, 0, 279.99, 279.99),    -- Galaxy Watch SE (Steady Decline)
+('ORD009', 5, 8, 10, 0, 1099.99, 10999.90), -- Pixel Tablet Pro (Sudden Spike)
 
 -- April Orders (120 days ago) - Previous Period
-(10, 'ORD010', 5, 9, 3, 0, 799.99, 2399.97),  -- Pixel Tablet (Cyclical)
-(11, 'ORD011', 1, 1, 2, 0, 1999.99, 3999.98), -- MacBook Pro 14" (Previous)
-(12, 'ORD012', 1, 2, 5, 0, 2499.99, 12499.95), -- MacBook Pro 16" (Seasonal)
+('ORD010', 5, 9, 3, 0, 799.99, 2399.97),  -- Pixel Tablet (Cyclical)
+('ORD011', 1, 1, 2, 0, 1999.99, 3999.98), -- MacBook Pro 14" (Previous)
+('ORD012', 1, 2, 5, 0, 2499.99, 12499.95), -- MacBook Pro 16" (Seasonal)
 
 -- May Orders (150 days ago) - Current Period
-(13, 'ORD013', 2, 3, 4, 0, 999.99, 3999.96),  -- iPhone 15 Pro (Steady)
-(14, 'ORD014', 3, 5, 2, 0, 229.99, 459.98),   -- Galaxy Buds Pro 2 (Previous)
-(15, 'ORD015', 1, 1, 7, 0, 1899.99, 13299.93), -- MacBook Pro 14" (Exponential)
+('ORD013', 2, 3, 4, 0, 999.99, 3999.96),  -- iPhone 15 Pro (Steady)
+('ORD014', 3, 5, 2, 0, 229.99, 459.98),   -- Galaxy Buds Pro 2 (Previous)
+('ORD015', 1, 1, 7, 0, 1899.99, 13299.93), -- MacBook Pro 14" (Exponential)
 
 -- June Orders (180 days ago) - Previous Period
-(16, 'ORD016', 2, 4, 2, 0, 1199.99, 2399.98), -- iPhone 15 Pro Max (Previous)
-(17, 'ORD017', 4, 6, 3, 0, 399.99, 1199.97),  -- Galaxy Watch 6 (Previous)
-(18, 'ORD018', 4, 7, 2, 0, 279.99, 559.98);   -- Galaxy Watch SE (Previous)
+('ORD016', 2, 4, 2, 0, 1199.99, 2399.98), -- iPhone 15 Pro Max (Previous)
+('ORD017', 4, 6, 3, 0, 399.99, 1199.97),  -- Galaxy Watch 6 (Previous)
+('ORD018', 4, 7, 2, 0, 279.99, 559.98);   -- Galaxy Watch SE (Previous)
 

@@ -2,13 +2,11 @@
 
 import { useState, useEffect, Suspense, ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import { FileUploadSection } from "@/components/upload/file-upload-section";
 import { ManualInputSection } from "@/components/upload/manual-input-section";
-import { ImportHistory } from "@/components/upload/import-history";
 import { ImportGuidelines } from "@/components/upload/import-guidelines";
-import { importHistory as mockImportHistory } from "@/lib/data/import-data";
 
 export default function InventoryClient() {
   const searchParams = useSearchParams();
@@ -47,10 +45,10 @@ export default function InventoryClient() {
               <h1 className="text-3xl font-semibold mb-4">資料匯入</h1>
 
               <Tabs defaultValue="import" className="w-full">
-                <TabsList className="w-fit mb-4">
+                {/* <TabsList className="w-fit mb-4">
                   <TabsTrigger value="import">匯入資料</TabsTrigger>
                   <TabsTrigger value="history">匯入歷史</TabsTrigger>
-                </TabsList>
+                </TabsList> */}
 
                 <TabsContent value="import" className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -67,9 +65,9 @@ export default function InventoryClient() {
                   <ImportGuidelines />
                 </TabsContent>
 
-                <TabsContent value="history">
+                {/* <TabsContent value="history">
                   <ImportHistory importHistory={mockImportHistory} />
-                </TabsContent>
+                </TabsContent> */}
               </Tabs>
             </div>
           </div>

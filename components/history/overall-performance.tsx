@@ -29,6 +29,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getDateRange as getDateRangeUtil } from "@/lib/date-utils";
 
 import { SalesData } from "@/lib/types";
+import dayjs from "dayjs";
 
 interface OverallPerformanceProps {
   salesData: SalesData[];
@@ -71,7 +72,7 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
     ) / 10;
 
   const filteredData = useMemo(() => {
-    const now = new Date("2025-05-01");
+    const now = dayjs().toDate();
     const { startDate, endDate } = getDateRangeUtil(
       timeRange,
       customDateRange,
@@ -142,9 +143,8 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
                     if (value !== "custom") {
                       setCustomDateRange(null);
                     } else if (value === "custom" && !customDateRange) {
-                      const now = new Date("2025-05-01");
-                      const startDate = new Date(now);
-                      startDate.setDate(startDate.getDate() - 30);
+                      const now = dayjs().toDate();
+                      const startDate = dayjs().subtract(30, "day").toDate();
                       setCustomDateRange({
                         start: startDate.toISOString().split("T")[0],
                         end: now.toISOString().split("T")[0],
@@ -180,7 +180,7 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
                       start: e.target.value,
                       end:
                         customDateRange?.end ||
-                        new Date("2025-05-01").toISOString().split("T")[0],
+                        dayjs().toISOString().split("T")[0],
                     })
                   }
                   className="w-[130px]"

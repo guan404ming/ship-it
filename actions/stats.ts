@@ -2,49 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { GroupedProductSales, RankingProduct, SalesData } from "@/lib/types";
 import { cookies } from "next/headers";
 
-type OrderItem = {
-  product_id: number;
-  model_id: number;
-  quantity: number;
-  total_price: number;
-};
-
-type Order = {
-  created_at: string;
-  total_paid: number;
-  order_items: OrderItem[];
-};
-
-type ModelSales = {
-  sales: number;
-  quantity: number;
-};
-
-function getDateList(startDate: string, endDate: string): string[] {
-  const dates: string[] = [];
-  const current = new Date(startDate);
-  const end = new Date(endDate);
-  while (current <= end) {
-    dates.push(current.toISOString().split("T")[0]);
-    current.setDate(current.getDate() + 1);
-  }
-  return dates;
-}
-
-function calculateModelSales(orders: Order[]): Map<number, ModelSales> {
-  const sales = new Map<number, ModelSales>();
-  orders?.forEach((order) =>
-    order.order_items?.forEach((item) => {
-      const current = sales.get(item.model_id) || { sales: 0, quantity: 0 };
-      sales.set(item.model_id, {
-        sales: current.sales + (Number(item.total_price) || 0),
-        quantity: current.quantity + (Number(item.quantity) || 0),
-      });
-    })
-  );
-  return sales;
-}
-
 export async function getHistoryData(
   startDate: string,
   endDate: string
@@ -56,169 +13,123 @@ export async function getHistoryData(
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
+  // 定義 sales_by_date view 的型別
+  type SalesByDateRow = {
+    date: string;
+    model_id: number;
+    product_id: number;
+    amount: number;
+    quantity: number;
+  };
+
   try {
-    // Calculate previous period dates
-    const previousStartDate = new Date(startDate);
-    const previousEndDate = new Date(endDate);
-    const timeDiff = previousEndDate.getTime() - previousStartDate.getTime();
-    previousStartDate.setTime(previousStartDate.getTime() - timeDiff);
-    previousEndDate.setTime(previousEndDate.getTime() - timeDiff);
+    // 1. 直接 select sales_by_date view
+    const { data: salesByDate, error: salesByDateError } = await supabase
+      .from("sales_by_date")
+      .select("*")
+      .gte("date", startDate)
+      .lte("date", endDate);
+    if (salesByDateError) throw salesByDateError;
 
-    // Fetch all required data
-    const [products, models, orders, previousOrders] = await Promise.all([
-      supabase.from("products").select("*"),
-      supabase.from("product_models").select("*"),
+    // 2. 撈 products, models
+    const [products, models] = await Promise.all([
       supabase
-        .from("orders")
-        .select(
-          `
-        created_at, total_paid, order_items (
-          product_id, model_id, quantity, total_price
-        )
-      `
-        )
-        .gte("created_at", startDate)
-        .lte("created_at", endDate),
+        .from("products")
+        .select("product_id, product_name, listed_date, status"),
       supabase
-        .from("orders")
+        .from("product_models")
         .select(
-          `
-        created_at, total_paid, order_items (
-          product_id, model_id, quantity, total_price
-        )
-      `
-        )
-        .gte("created_at", previousStartDate.toISOString())
-        .lte("created_at", previousEndDate.toISOString()),
+          "model_id, product_id, model_name, original_price, promo_price, created_at"
+        ),
     ]);
+    if (products.error || models.error) throw products.error || models.error;
 
-    if (products.error || models.error || orders.error || previousOrders.error)
-      throw (
-        products.error || models.error || orders.error || previousOrders.error
-      );
-
-    const dateList = getDateList(startDate, endDate);
-    const modelSales = calculateModelSales(orders.data);
-    const previousModelSales = calculateModelSales(previousOrders.data);
-
-    // Process sales data
-    const salesData = dateList.map((date) => {
-      const dayOrders =
-        orders.data?.filter(
-          (o) => new Date(o.created_at!).toISOString().split("T")[0] === date
-        ) || [];
-
-      return {
-        date,
-        amount: dayOrders.reduce(
-          (sum, o) => sum + (Number(o.total_paid) || 0),
-          0
-        ),
-        quantity: dayOrders.reduce(
-          (sum, o) =>
-            sum +
-            (o.order_items?.reduce(
-              (s, i) => s + (Number(i.quantity) || 0),
-              0
-            ) || 0),
-          0
-        ),
-      };
+    // 3. 組合 salesData
+    // 只要日期、總金額、總數量
+    const salesDataMap = new Map<
+      string,
+      { amount: number; quantity: number }
+    >();
+    (salesByDate as SalesByDateRow[])?.forEach((row) => {
+      const date = row.date.split("T")[0];
+      const prev = salesDataMap.get(date) || { amount: 0, quantity: 0 };
+      salesDataMap.set(date, {
+        amount: prev.amount + Number(row.amount || 0),
+        quantity: prev.quantity + Number(row.quantity || 0),
+      });
     });
+    const salesData: SalesData[] = Array.from(salesDataMap.entries()).map(
+      ([date, v]) => ({
+        date,
+        amount: v.amount,
+        quantity: v.quantity,
+      })
+    );
 
-    // Process product sales data
-    const productSalesData =
-      products.data?.map((p) => ({
-        product_id: p.product_id,
-        product_name: p.product_name || "",
-        listed_date: p.listed_date || "",
-        status: p.status || "",
-        models:
-          models.data
-            ?.filter((m) => m.product_id === p.product_id)
-            .map((m) => ({
-              model_id: m.model_id,
-              model_name: m.model_name || "",
-              original_price: m.original_price || 0,
-              promo_price: m.promo_price,
-              created_at: m.created_at || "",
-              product_id: m.product_id || 0,
-              data: dateList.map((d) => {
-                const dayOrders =
-                  orders.data?.filter(
-                    (o) =>
-                      new Date(o.created_at!).toISOString().split("T")[0] ===
-                        d &&
-                      o.order_items?.some((i) => i.model_id === m.model_id)
-                  ) || [];
+    // 4. 組合 productSalesData
+    const productSalesData: GroupedProductSales[] =
+      products.data?.map((p) => {
+        const productModels =
+          models.data?.filter((m) => m.product_id === p.product_id) || [];
+        return {
+          product_id: p.product_id,
+          product_name: p.product_name,
+          listed_date: p.listed_date,
+          status: p.status,
+          models: productModels.map((m) => {
+            const modelData =
+              (salesByDate as SalesByDateRow[])?.filter(
+                (d) => d.model_id === m.model_id
+              ) || [];
+            return {
+              ...m,
+              data: modelData.map((d) => ({
+                date: d.date.split("T")[0],
+                amount: Number(d.amount) || 0,
+                quantity: Number(d.quantity) || 0,
+              })),
+            };
+          }),
+        };
+      }) || [];
 
-                return {
-                  date: d,
-                  amount: dayOrders.reduce(
-                    (sum, o) =>
-                      sum +
-                      (o.order_items?.reduce(
-                        (s, i) =>
-                          i.model_id === m.model_id
-                            ? s + (Number(i.total_price) || 0)
-                            : s,
-                        0
-                      ) || 0),
-                    0
-                  ),
-                  quantity: dayOrders.reduce(
-                    (sum, o) =>
-                      sum +
-                      (o.order_items?.reduce(
-                        (s, i) =>
-                          i.model_id === m.model_id
-                            ? s + (Number(i.quantity) || 0)
-                            : s,
-                        0
-                      ) || 0),
-                    0
-                  ),
-                };
-              }),
-            })) || [],
-      })) || [];
-
-    // Process ranking data
-    const productRankingData =
-      products.data?.flatMap(
-        (p) =>
-          models.data
-            ?.filter((m) => m.product_id === p.product_id)
-            .map((m) => {
-              const current = modelSales.get(m.model_id) || {
-                sales: 0,
-                quantity: 0,
-              };
-              const previous = previousModelSales.get(m.model_id) || {
-                sales: 0,
-                quantity: 0,
-              };
-              const growth =
-                previous.sales === 0
-                  ? 0
-                  : ((current.sales - previous.sales) / previous.sales) * 100;
-
-              return {
-                product_id: p.product_id,
-                product_name: p.product_name || "",
-                listed_date: p.listed_date || "",
-                status: p.status || "",
-                model_id: m.model_id,
-                model_name: m.model_name || "",
-                original_price: m.original_price || 0,
-                promo_price: m.promo_price,
-                created_at: m.created_at || "",
-                sales: current.sales,
-                quantity: current.quantity,
-                growth: Number(growth.toFixed(1)),
-              };
-            }) || []
-      ) || [];
+    // 5. 組合 productRankingData
+    const modelSalesMap = new Map<
+      number,
+      { amount: number; quantity: number }
+    >();
+    (salesByDate as SalesByDateRow[])?.forEach((row) => {
+      const prev = modelSalesMap.get(row.model_id) || {
+        amount: 0,
+        quantity: 0,
+      };
+      modelSalesMap.set(row.model_id, {
+        amount: prev.amount + Number(row.amount || 0),
+        quantity: prev.quantity + Number(row.quantity || 0),
+      });
+    });
+    const productRankingData: RankingProduct[] =
+      models.data?.map((m) => {
+        const p = products.data?.find((p) => p.product_id === m.product_id);
+        const sales = modelSalesMap.get(m.model_id) || {
+          amount: 0,
+          quantity: 0,
+        };
+        return {
+          product_id: p?.product_id || 0,
+          product_name: p?.product_name || "",
+          listed_date: p?.listed_date || "",
+          status: p?.status || "",
+          model_id: m.model_id,
+          model_name: m.model_name,
+          original_price: m.original_price,
+          promo_price: m.promo_price,
+          created_at: m.created_at,
+          sales: sales.amount,
+          quantity: sales.quantity,
+          growth: undefined, // 若要計算成長率，需再查詢前一期間資料
+        };
+      }) || [];
 
     return { salesData, productSalesData, productRankingData };
   } catch (error) {

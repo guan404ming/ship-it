@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 /**
  * 日期和成長率計算相關的工具函數
  */
@@ -45,7 +47,7 @@ export function getCustomDateRangeDays(
 export function getDateRange(
   timeRange: string,
   customDateRange: { start: string; end: string } | null,
-  referenceDate: Date = new Date("2025-05-01")
+  referenceDate: Date = dayjs().toDate()
 ): { startDate: Date; endDate: Date } {
   const now = new Date(referenceDate);
   let startDate: Date;
@@ -69,7 +71,7 @@ export function getDateRange(
 export function getGrowthComparisonPeriods(
   timeRange: string,
   customDateRange: { start: string; end: string } | null,
-  referenceDate: Date = new Date("2025-05-01")
+  referenceDate: Date = dayjs().toDate()
 ): {
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
@@ -143,7 +145,7 @@ export function calculateDataGrowthRates<T extends { date: string }>(
   timeRange: string,
   customDateRange: { start: string; end: string } | null,
   valueFields: Array<keyof T>,
-  referenceDate: Date = new Date("2025-05-01")
+  referenceDate: Date = dayjs().toDate()
 ): Record<string, number | undefined> {
   // 取得日期區間
   const {

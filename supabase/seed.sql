@@ -81,139 +81,53 @@ INSERT INTO purchase_items (batch_id, model_id, quantity, unit_cost, note) VALUE
 (3, 8, 20, 1000.00, 'Initial stock order'),
 (3, 9, 35, 700.00, 'Regular stock replenishment');
 
--- Insert historical orders (last 180 days)
-INSERT INTO orders (order_id, buyer_id, product_total_price, shipping_fee, total_paid, order_status, created_at, payment_time, shipped_at, completed_at) VALUES
--- January Orders (30 days ago)
-('ORD001', 1, 1999.99, 15.00, 2014.99, 'delivered', 
- NOW() - INTERVAL '30 days', 
- NOW() - INTERVAL '29 days 23 hours', 
- NOW() - INTERVAL '28 days', 
- NOW() - INTERVAL '25 days'),
-('ORD002', 2, 2499.99, 15.00, 2514.99, 'delivered', 
- NOW() - INTERVAL '29 days', 
- NOW() - INTERVAL '28 days 23 hours', 
- NOW() - INTERVAL '27 days', 
- NOW() - INTERVAL '24 days'),
-('ORD003', 3, 999.99, 15.00, 1014.99, 'delivered', 
- NOW() - INTERVAL '28 days', 
- NOW() - INTERVAL '27 days 23 hours', 
- NOW() - INTERVAL '26 days', 
- NOW() - INTERVAL '23 days'),
-
--- February Orders (60 days ago)
-('ORD004', 1, 229.99, 15.00, 244.99, 'delivered', 
- NOW() - INTERVAL '60 days', 
- NOW() - INTERVAL '59 days 23 hours', 
- NOW() - INTERVAL '58 days', 
- NOW() - INTERVAL '55 days'),
-('ORD005', 2, 1899.99, 15.00, 1914.99, 'delivered', 
- NOW() - INTERVAL '59 days', 
- NOW() - INTERVAL '58 days 23 hours', 
- NOW() - INTERVAL '57 days', 
- NOW() - INTERVAL '54 days'),
-('ORD006', 3, 1199.99, 15.00, 1214.99, 'delivered', 
- NOW() - INTERVAL '58 days', 
- NOW() - INTERVAL '57 days 23 hours', 
- NOW() - INTERVAL '56 days', 
- NOW() - INTERVAL '53 days'),
-
--- March Orders (90 days ago)
-('ORD007', 1, 399.99, 15.00, 414.99, 'delivered', 
- NOW() - INTERVAL '90 days', 
- NOW() - INTERVAL '89 days 23 hours', 
- NOW() - INTERVAL '88 days', 
- NOW() - INTERVAL '85 days'),
-('ORD008', 2, 279.99, 15.00, 294.99, 'delivered', 
- NOW() - INTERVAL '89 days', 
- NOW() - INTERVAL '88 days 23 hours', 
- NOW() - INTERVAL '87 days', 
- NOW() - INTERVAL '84 days'),
-('ORD009', 3, 1099.99, 15.00, 1114.99, 'delivered', 
- NOW() - INTERVAL '88 days', 
- NOW() - INTERVAL '87 days 23 hours', 
- NOW() - INTERVAL '86 days', 
- NOW() - INTERVAL '83 days'),
-
--- April Orders (120 days ago)
-('ORD010', 1, 799.99, 15.00, 814.99, 'delivered', 
- NOW() - INTERVAL '120 days', 
- NOW() - INTERVAL '119 days 23 hours', 
- NOW() - INTERVAL '118 days', 
- NOW() - INTERVAL '115 days'),
-('ORD011', 2, 1999.99, 15.00, 2014.99, 'delivered', 
- NOW() - INTERVAL '119 days', 
- NOW() - INTERVAL '118 days 23 hours', 
- NOW() - INTERVAL '117 days', 
- NOW() - INTERVAL '114 days'),
-('ORD012', 3, 2499.99, 15.00, 2514.99, 'delivered', 
- NOW() - INTERVAL '118 days', 
- NOW() - INTERVAL '117 days 23 hours', 
- NOW() - INTERVAL '116 days', 
- NOW() - INTERVAL '113 days'),
-
--- May Orders (150 days ago)
-('ORD013', 1, 999.99, 15.00, 1014.99, 'delivered', 
- NOW() - INTERVAL '150 days', 
- NOW() - INTERVAL '149 days 23 hours', 
- NOW() - INTERVAL '148 days', 
- NOW() - INTERVAL '145 days'),
-('ORD014', 2, 229.99, 15.00, 244.99, 'delivered', 
- NOW() - INTERVAL '149 days', 
- NOW() - INTERVAL '148 days 23 hours', 
- NOW() - INTERVAL '147 days', 
- NOW() - INTERVAL '144 days'),
-('ORD015', 3, 1899.99, 15.00, 1914.99, 'delivered', 
- NOW() - INTERVAL '148 days', 
- NOW() - INTERVAL '147 days 23 hours', 
- NOW() - INTERVAL '146 days', 
- NOW() - INTERVAL '143 days'),
-
--- June Orders (180 days ago)
-('ORD016', 1, 1199.99, 15.00, 1214.99, 'delivered', 
- NOW() - INTERVAL '180 days', 
- NOW() - INTERVAL '179 days 23 hours', 
- NOW() - INTERVAL '178 days', 
- NOW() - INTERVAL '175 days'),
-('ORD017', 2, 399.99, 15.00, 414.99, 'delivered', 
- NOW() - INTERVAL '179 days', 
- NOW() - INTERVAL '178 days 23 hours', 
- NOW() - INTERVAL '177 days', 
- NOW() - INTERVAL '174 days'),
-('ORD018', 3, 279.99, 15.00, 294.99, 'delivered', 
- NOW() - INTERVAL '178 days', 
- NOW() - INTERVAL '177 days 23 hours', 
- NOW() - INTERVAL '176 days', 
- NOW() - INTERVAL '173 days');
-
--- Insert order items with diverse growth patterns
-INSERT INTO order_items (order_id, product_id, model_id, quantity, returned_quantity, sold_price, total_price) VALUES
--- January Orders (30 days ago) - Current Period
-('ORD001', 1, 1, 5, 0, 1999.99, 9999.95),  -- MacBook Pro 14" (Exponential Growth)
-('ORD002', 1, 2, 2, 0, 2499.99, 4999.98),  -- MacBook Pro 16" (Seasonal)
-('ORD003', 2, 3, 8, 0, 999.99, 7999.92),   -- iPhone 15 Pro (Sudden Spike)
-
--- February Orders (60 days ago) - Previous Period
-('ORD004', 3, 5, 3, 0, 229.99, 689.97),    -- Galaxy Buds Pro 2 (Steady Decline)
-('ORD005', 1, 1, 3, 0, 1899.99, 5699.97),  -- MacBook Pro 14" (Previous)
-('ORD006', 2, 4, 4, 0, 1199.99, 4799.96),  -- iPhone 15 Pro Max (Cyclical)
-
--- March Orders (90 days ago) - Current Period
-('ORD007', 4, 6, 6, 0, 399.99, 2399.94),   -- Galaxy Watch 6 (Exponential)
-('ORD008', 4, 7, 1, 0, 279.99, 279.99),    -- Galaxy Watch SE (Steady Decline)
-('ORD009', 5, 8, 10, 0, 1099.99, 10999.90), -- Pixel Tablet Pro (Sudden Spike)
-
--- April Orders (120 days ago) - Previous Period
-('ORD010', 5, 9, 3, 0, 799.99, 2399.97),  -- Pixel Tablet (Cyclical)
-('ORD011', 1, 1, 2, 0, 1999.99, 3999.98), -- MacBook Pro 14" (Previous)
-('ORD012', 1, 2, 5, 0, 2499.99, 12499.95), -- MacBook Pro 16" (Seasonal)
-
--- May Orders (150 days ago) - Current Period
-('ORD013', 2, 3, 4, 0, 999.99, 3999.96),  -- iPhone 15 Pro (Steady)
-('ORD014', 3, 5, 2, 0, 229.99, 459.98),   -- Galaxy Buds Pro 2 (Previous)
-('ORD015', 1, 1, 7, 0, 1899.99, 13299.93), -- MacBook Pro 14" (Exponential)
-
--- June Orders (180 days ago) - Previous Period
-('ORD016', 2, 4, 2, 0, 1199.99, 2399.98), -- iPhone 15 Pro Max (Previous)
-('ORD017', 4, 6, 3, 0, 399.99, 1199.97),  -- Galaxy Watch 6 (Previous)
-('ORD018', 4, 7, 2, 0, 279.99, 559.98);   -- Galaxy Watch SE (Previous)
+-- Insert historical orders (last 30 days, 3 orders per day)
+DO $$
+DECLARE
+  d integer;
+  o integer;
+  order_id text;
+  buyer_id integer;
+  product_id integer;
+  model_id integer;
+  q integer;
+  price numeric;
+  total numeric;
+BEGIN
+  FOR d IN 1..30 LOOP
+    FOR o IN 1..3 LOOP
+      order_id := 'ORD' || to_char(d, 'FM00') || to_char(o, 'FM0');
+      buyer_id := ((o + d) % 3) + 1;
+      INSERT INTO orders (order_id, buyer_id, product_total_price, shipping_fee, total_paid, order_status, created_at, payment_time, shipped_at, completed_at)
+      VALUES (
+        order_id,
+        buyer_id,
+        1000 + d * 10 + o * 5,
+        15.00,
+        1015 + d * 10 + o * 5,
+        'delivered',
+        NOW() - (d || ' days')::interval,
+        NOW() - (d || ' days 23 hours')::interval,
+        NOW() - (d || ' days 22 hours')::interval,
+        NOW() - (d || ' days 21 hours')::interval
+      );
+      -- 每張訂單隨機 2~4 個商品型號
+      FOR q IN 1..((o % 3) + 2) LOOP
+        product_id := ((q + o + d) % 5) + 1;
+        model_id := ((q + o + d) % 9) + 1;
+        price := 100 + (model_id * 10) + (d * 2);
+        INSERT INTO order_items (order_id, product_id, model_id, quantity, returned_quantity, sold_price, total_price)
+        VALUES (
+          order_id,
+          product_id,
+          model_id,
+          ((q + d + o) % 5) + 1,
+          0,
+          price,
+          price * (((q + d + o) % 5) + 1)
+        );
+      END LOOP;
+    END LOOP;
+  END LOOP;
+END $$;
 

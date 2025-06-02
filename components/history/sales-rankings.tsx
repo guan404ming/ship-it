@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { RankingProduct } from "@/lib/types";
+import dayjs from "dayjs";
 
 interface SalesRankingProps {
   productRankingData: RankingProduct[];
@@ -135,9 +136,8 @@ export function SalesRankings({ productRankingData }: SalesRankingProps) {
                   setCustomDateRange(null);
                 } else if (value === "custom" && !customDateRange) {
                   // 設定自定義範圍的默認值
-                  const now = new Date("2025-05-01");
-                  const startDate = new Date(now);
-                  startDate.setDate(startDate.getDate() - 30);
+                  const now = dayjs().toDate();
+                  const startDate = dayjs().subtract(30, "day").toDate();
 
                   setCustomDateRange({
                     start: startDate.toISOString().split("T")[0],

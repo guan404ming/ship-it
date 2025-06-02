@@ -50,6 +50,7 @@ import {
   getProductDateRangeData,
   calculateProductGrowthRates,
 } from "@/lib/product-utils";
+import dayjs from "dayjs";
 
 interface ProductPerformanceProps {
   productSalesData: GroupedProductSales[];
@@ -111,7 +112,7 @@ export function ProductPerformance({
 
   // 計算日期範圍
   const getDateRange = React.useCallback(() => {
-    const now = new Date("2025-05-01");
+    const now = dayjs().toDate();
     return getDateRangeUtil(timeRange, customDateRange, now);
   }, [timeRange, customDateRange]);
 
@@ -258,9 +259,8 @@ export function ProductPerformance({
                   setCustomDateRange(null);
                 } else if (value === "custom" && !customDateRange) {
                   // 如果選擇自訂範圍但尚未設定日期，則設定默認值
-                  const now = new Date("2025-05-01");
-                  const startDate = new Date(now);
-                  startDate.setDate(startDate.getDate() - 30); // 默認為最近30天
+                  const now = dayjs().toDate();
+                  const startDate = dayjs().subtract(30, "day").toDate();
 
                   setCustomDateRange({
                     start: startDate.toISOString().split("T")[0],

@@ -168,7 +168,7 @@ export function PurchaseEditDialog({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="text-sm font-medium">單價</label>
                 <Input
                   type="number"
@@ -180,7 +180,7 @@ export function PurchaseEditDialog({
                   }
                   placeholder="輸入單價"
                 />
-              </div>
+              </div> */}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">預計到貨日</label>

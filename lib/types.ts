@@ -57,7 +57,6 @@ export type PurchaseDashboardRow = {
   model_name: string;
   product_name: string;
   note?: string;
-  unit_cost: number;
 };
 
 export type PurchaseFormData = {
@@ -70,7 +69,6 @@ export type PurchaseFormData = {
   product_name: string;
   model_name: string;
   quantity: number;
-  unit_cost: number;
   created_at: string;
   expect_date: string;
   status: string;

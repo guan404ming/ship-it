@@ -126,9 +126,39 @@ export async function getPurchaseDashboardData(): Promise<
       model_name: pm.model_name,
       product_name: p.product_name,
       note: i.note ?? null,
-      unit_cost: i.unit_cost,
     };
   });
+}
+
+export async function updatePurchaseBatchStatus(
+  items: { batch_id: number; item_id: number }[],
+  status: "pending" | "confirmed" | "draft" = "confirmed"
+) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  try {
+    // Get unique batch_ids
+    const batchIds = [...new Set(items.map((item) => item.batch_id))];
+
+    // Update status for each batch
+    for (const batchId of batchIds) {
+      const { error: batchError } = await supabase
+        .from("purchase_batches")
+        .update({ status })
+        .eq("batch_id", batchId);
+
+      if (batchError) {
+        console.error("Failed to update batch status:", batchError);
+        throw batchError;
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating batch status:", error);
+    throw error;
+  }
 }
 
 export async function updatePurchaseItem(formData: PurchaseFormData) {
@@ -141,7 +171,6 @@ export async function updatePurchaseItem(formData: PurchaseFormData) {
       .update({
         quantity: formData.quantity,
         note: formData.note,
-        unit_cost: formData.unit_cost,
         model_id: formData.model_id,
       })
       .eq("item_id", formData.item_id);

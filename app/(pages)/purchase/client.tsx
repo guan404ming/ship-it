@@ -29,7 +29,10 @@ import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { PurchaseDashboardRow } from "@/lib/types";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import dayjs from "dayjs";
-import { deletePurchaseItems } from "@/actions/purchase";
+import {
+  deletePurchaseItems,
+  updatePurchaseBatchStatus,
+} from "@/actions/purchase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -176,14 +179,23 @@ export default function PurchaseClient({
   };
 
   // Handle marking items as delivered
-  const handleMarkAsDelivered = () => {
-    // Placeholder for future implementation
-    console.log("以下項目將被標記為已送達:", getSelectedItemsData());
-    alert(`已標記 ${selectedItemsCount} 個項目為已送達`);
+  const handleMarkAsDelivered = async () => {
+    try {
+      const selectedItems = getSelectedItemsData();
+      const itemsToUpdate = selectedItems.map((item) => ({
+        batch_id: item.batch_id,
+        item_id: item.item_id,
+      }));
 
-    // Here you would implement the actual API call to update the status
-    // For now, just clear the selection
-    setSelectedRows({});
+      await updatePurchaseBatchStatus(itemsToUpdate, "confirmed");
+
+      toast.success(`成功標記 ${selectedItemsCount} 個項目為已送達`);
+      setSelectedRows({});
+      router.refresh();
+    } catch (error) {
+      console.error("Error marking items as delivered:", error);
+      toast.error("標記項目為已送達時發生錯誤");
+    }
   };
 
   return (

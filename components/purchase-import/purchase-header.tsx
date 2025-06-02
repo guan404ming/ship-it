@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Supplier } from "@/actions/suppliers";
+import dayjs from "dayjs";
 
 interface PurchaseHeaderProps {
   suppliers: Supplier[];
@@ -66,11 +67,10 @@ export const PurchaseHeader = ({
           onChange={(e) => onDeliveryDaysChange(Number(e.target.value))}
           className="w-24"
         />
-        <span className="text-sm text-muted-foreground">天後</span>
+        <span className="text-sm text-muted-foreground">
+          天後 ({dayjs(expectedDeliveryDate).format("YYYY-MM-DD")})
+        </span>
       </div>
-      <p className="text-sm text-muted-foreground mt-2">
-        預計到貨日期：{expectedDeliveryDate}
-      </p>
     </div>
   </div>
 );

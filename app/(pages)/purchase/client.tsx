@@ -29,6 +29,9 @@ import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { PurchaseDashboardRow } from "@/lib/types";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import dayjs from "dayjs";
+import { deletePurchaseItems } from "@/actions/purchase";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface PurchaseTempClientProps {
   initialPurchase: PurchaseDashboardRow[];
@@ -37,6 +40,7 @@ interface PurchaseTempClientProps {
 export default function PurchaseClient({
   initialPurchase,
 }: PurchaseTempClientProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedRows, setSelectedRows] = React.useState<
@@ -153,10 +157,22 @@ export default function PurchaseClient({
 
   // Handle bulk delete
   const handleBulkDelete = async () => {
-    const selectedItems = getSelectedItemsData();
-    // Implement your delete logic here
-    console.log("以下項目將被刪除:", selectedItems);
-    setSelectedRows({});
+    try {
+      const selectedItems = getSelectedItemsData();
+      const itemsToDelete = selectedItems.map((item) => ({
+        batch_id: item.batch_id,
+        item_id: item.item_id,
+      }));
+
+      await deletePurchaseItems(itemsToDelete);
+
+      toast.success(`成功刪除 ${selectedItemsCount} 個項目`);
+      setSelectedRows({});
+      router.refresh();
+    } catch (error) {
+      console.error("Error deleting items:", error);
+      toast.error("刪除項目時發生錯誤");
+    }
   };
 
   // Handle marking items as delivered

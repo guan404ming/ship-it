@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
@@ -14,64 +14,34 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PurchaseDashboardRow } from "@/lib/types";
+import { PurchaseDashboardRow, PurchaseFormData } from "@/lib/types";
+import dayjs from "dayjs";
+import { updatePurchaseItem } from "@/actions/purchase";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-interface PurchaseEditDialogProps {
+export function PurchaseEditDialog({
+  purchase,
+}: {
   purchase: PurchaseDashboardRow;
-}
+}) {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState<PurchaseFormData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-// Local interface for model items in the edit dialog
-interface LocalModelItem {
-  id: number;
-  name: string;
-  quantity: number;
-}
-
-// Interface for our form data
-interface PurchaseFormData {
-  item_id: number;
-  supplier_name: string;
-  product_name: string;
-  model_name: string;
-  quantity: number;
-  unit_cost: number;
-  created_at: string;
-  expect_date: string;
-  note?: string;
-  models: LocalModelItem[];
-  batch_id?: number;
-}
-
-export function PurchaseEditDialog({ purchase }: PurchaseEditDialogProps) {
-  const [open, setOpen] = React.useState(false);
-  const [formData, setFormData] = React.useState<PurchaseFormData | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && purchase) {
-      const purchaseItem = purchase;
-
-      if (purchaseItem) {
-        setFormData({
-          item_id: purchaseItem.item_id,
-          supplier_name: purchaseItem.supplier_name || "",
-          product_name: purchaseItem.product_name || "",
-          model_name: purchaseItem.model_name || "",
-          quantity: purchaseItem.quantity || 0,
-          unit_cost: purchaseItem.unit_cost || 0,
-          created_at: purchaseItem.created_at || "",
-          expect_date: purchaseItem.expect_date || "",
-          note: purchaseItem.note || "",
-          batch_id: purchaseItem.batch_id,
-          models: [
-            {
-              id: 1,
-              name: purchaseItem.model_name || "",
-              quantity: purchaseItem.quantity || 0,
-            },
-          ],
-        });
-      }
+      setFormData({
+        ...purchase,
+        models: [
+          {
+            id: purchase.model_id,
+            name: purchase.model_name || "",
+            quantity: purchase.quantity || 0,
+          },
+        ],
+      });
     }
   }, [open, purchase]);
 
@@ -107,14 +77,17 @@ export function PurchaseEditDialog({ purchase }: PurchaseEditDialogProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (formData) {
+        await updatePurchaseItem(formData);
+      }
 
-      console.log("Updated purchase item:", formData);
+      router.refresh();
+      toast.success("叫貨項目已更新");
       setOpen(false);
     } catch (error) {
       console.error("Error updating purchase item:", error);
@@ -199,7 +172,9 @@ export function PurchaseEditDialog({ purchase }: PurchaseEditDialogProps) {
                 <label className="text-sm font-medium">單價</label>
                 <Input
                   type="number"
-                  value={formData.unit_cost.toString()}
+                  value={
+                    formData.unit_cost ? formData.unit_cost.toString() : "0"
+                  }
                   onChange={(e) =>
                     handleChange("unit_cost", parseFloat(e.target.value) || 0)
                   }
@@ -211,7 +186,7 @@ export function PurchaseEditDialog({ purchase }: PurchaseEditDialogProps) {
                 <label className="text-sm font-medium">預計到貨日</label>
                 <Input
                   type="date"
-                  value={formData.expect_date}
+                  value={dayjs(formData.expect_date).format("YYYY-MM-DD")}
                   onChange={(e) => handleChange("expect_date", e.target.value)}
                 />
               </div>

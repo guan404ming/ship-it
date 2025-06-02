@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import type { PurchaseDashboardRow } from "@/lib/types";
+import type { PurchaseDashboardRow, PurchaseFormData } from "@/lib/types";
 
 export async function createPurchaseBatch(
   supplierId: number,
@@ -79,23 +79,6 @@ export async function addPurchaseItem(
   return data;
 }
 
-export async function getPurchaseBatches() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-
-  const { data, error } = await supabase.from("purchase_batches").select(`
-      *,
-      suppliers (*),
-      purchase_items (
-        *,
-        product_models (*)
-      )
-    `);
-
-  if (error) throw error;
-  return data;
-}
-
 export async function getPurchaseDashboardData(): Promise<
   PurchaseDashboardRow[]
 > {
@@ -106,11 +89,18 @@ export async function getPurchaseDashboardData(): Promise<
       *,
       purchase_batches (
         *,
-        suppliers (supplier_name)
+        suppliers (
+          supplier_id,
+          supplier_name
+        )
       ),
       product_models (
+        model_id,
         model_name,
-        products(product_name)
+        products (
+          product_id,
+          product_name
+        )
       )
     `);
 
@@ -124,8 +114,11 @@ export async function getPurchaseDashboardData(): Promise<
 
     return {
       item_id: i.item_id,
-      quantity: i.quantity,
       batch_id: pb.batch_id,
+      supplier_id: s.supplier_id,
+      model_id: pm.model_id,
+      product_id: p.product_id,
+      quantity: i.quantity,
       created_at: pb.created_at,
       expect_date: pb.expect_date,
       status: pb.status,
@@ -136,4 +129,123 @@ export async function getPurchaseDashboardData(): Promise<
       unit_cost: i.unit_cost,
     };
   });
+}
+
+export async function updatePurchaseItem(formData: PurchaseFormData) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  try {
+    // 1. Update purchase item
+    const { error: itemError } = await supabase
+      .from("purchase_items")
+      .update({
+        quantity: formData.quantity,
+        note: formData.note,
+        unit_cost: formData.unit_cost,
+        model_id: formData.model_id,
+      })
+      .eq("item_id", formData.item_id);
+
+    if (itemError) throw itemError + "itemError";
+
+    // 2. Update purchase batch
+    const { error: batchError } = await supabase
+      .from("purchase_batches")
+      .update({
+        status: formData.status,
+        expect_date: formData.expect_date,
+        supplier_id: formData.supplier_id,
+      })
+      .eq("batch_id", formData.batch_id);
+
+    if (batchError) throw batchError + "batchError";
+
+    // 3. Update supplier if supplier info changed
+    if (formData.supplier_name && formData.supplier_id) {
+      const { error: supplierError } = await supabase
+        .from("suppliers")
+        .update({
+          supplier_name: formData.supplier_name,
+        })
+        .eq("supplier_id", formData.supplier_id);
+
+      if (supplierError) throw supplierError + "supplierError";
+    }
+
+    // 4. Update product model if model info changed
+    if (formData.model_name && formData.model_id) {
+      const { error: modelError } = await supabase
+        .from("product_models")
+        .update({
+          model_name: formData.model_name,
+          product_id: formData.product_id,
+        })
+        .eq("model_id", formData.model_id);
+
+      if (modelError) throw modelError + "modelError";
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating purchase item:", error);
+    throw error;
+  }
+}
+
+export async function deletePurchaseItems(
+  items: { batch_id: number; item_id: number }[]
+) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  try {
+    for (const item of items) {
+      const { error: deleteError } = await supabase
+        .from("purchase_items")
+        .delete()
+        .match({
+          batch_id: item.batch_id,
+          item_id: item.item_id,
+        });
+
+      if (deleteError) {
+        console.error("Failed to delete purchase item:", deleteError);
+        throw deleteError;
+      }
+    }
+
+    // Get unique batch_ids
+    const batchIds = [...new Set(items.map((item) => item.batch_id))];
+
+    // Check if any batches are now empty
+    for (const batchId of batchIds) {
+      const { data: remainingItems, error: countError } = await supabase
+        .from("purchase_items")
+        .select("item_id", { count: "exact" })
+        .eq("batch_id", batchId);
+
+      if (countError) {
+        console.error("Failed to count remaining items:", countError);
+        throw countError;
+      }
+
+      // If no items left in the batch, delete the batch
+      if (remainingItems.length === 0) {
+        const { error: batchDeleteError } = await supabase
+          .from("purchase_batches")
+          .delete()
+          .eq("batch_id", batchId);
+
+        if (batchDeleteError) {
+          console.error("Failed to delete empty batch:", batchDeleteError);
+          throw batchDeleteError;
+        }
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting purchase items:", error);
+    throw error;
+  }
 }

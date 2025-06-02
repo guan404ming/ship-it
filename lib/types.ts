@@ -51,10 +51,35 @@ export type PurchaseDashboardRow = {
   expect_date: string;
   status: string;
   supplier_name: string;
+  supplier_id: number;
+  model_id: number;
+  product_id: number;
   model_name: string;
   product_name: string;
   note?: string;
   unit_cost: number;
+};
+
+export type PurchaseFormData = {
+  item_id: number;
+  batch_id: number;
+  supplier_id: number;
+  model_id: number;
+  product_id: number;
+  supplier_name: string;
+  product_name: string;
+  model_name: string;
+  quantity: number;
+  unit_cost: number;
+  created_at: string;
+  expect_date: string;
+  status: string;
+  note?: string;
+  models: {
+    id: number;
+    name: string;
+    quantity: number;
+  }[];
 };
 
 // 用於匯入歷史

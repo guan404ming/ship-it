@@ -61,10 +61,6 @@ export default function PurchaseClient({
     setIsDialogOpen(true);
   };
 
-  const totalOrders = new Set(initialPurchase.map((item) => item.batch_id))
-    .size;
-  const totalItems = initialPurchase.length;
-
   const filteredAndSortedData = React.useMemo(() => {
     let filteredData = [...initialPurchase];
 
@@ -104,8 +100,13 @@ export default function PurchaseClient({
       }
     });
 
-    return filteredData;
+    return filteredData.filter((item) => item.status !== "confirmed");
   }, [searchQuery, sortField, sortDirection, initialPurchase]);
+
+  const totalOrders = new Set(
+    filteredAndSortedData.map((item) => item.batch_id)
+  ).size;
+  const totalItems = filteredAndSortedData.length;
 
   // Toggle a single row selection
   const toggleRowSelection = (id: number) => {

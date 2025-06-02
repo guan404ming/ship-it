@@ -50,7 +50,7 @@ export async function createPurchaseBatch(
       throw itemError;
     }
   }
-  return data
+  return data;
 }
 
 export async function addPurchaseItem(
@@ -102,9 +102,7 @@ export async function getPurchaseDashboardData(): Promise<
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase
-    .from("purchase_items")
-    .select(`
+  const { data, error } = await supabase.from("purchase_items").select(`
       *,
       purchase_batches (
         *,

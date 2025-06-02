@@ -75,10 +75,9 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
   const filteredAndSortedData = React.useMemo(() => {
     let filteredData = [...initialInventory].map((item) => ({
       ...item,
-      supplier_name: item.supplier_name || "廠商" + ((item.model_id % 5) + 1),
-      remaining_days: item.remaining_days || Math.floor(Math.random() * 20) + 1,
-      is_ordered:
-        item.is_ordered !== undefined ? item.is_ordered : Math.random() > 0.5,
+      supplier_name: item.supplier_name || "未知廠商",
+      remaining_days: item.remaining_days || 0,
+      is_ordered: item.is_ordered !== undefined ? item.is_ordered : false,
     }));
 
     if (searchQuery) {
@@ -116,17 +115,27 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
         const aValue = a[sortConfig.key as keyof InventoryDashboardRow];
         const bValue = b[sortConfig.key as keyof InventoryDashboardRow];
 
-        if (aValue !== undefined && bValue !== undefined) {
-          const aCompare = aValue ?? 0;
-          const bCompare = bValue ?? 0;
-          if (aCompare < bCompare) {
-            return sortConfig.direction === "ascending" ? -1 : 1;
-          }
-          if (aCompare > bCompare) {
-            return sortConfig.direction === "ascending" ? 1 : -1;
-          }
+        // Handle undefined values
+        if (aValue === undefined && bValue === undefined) return 0;
+        if (aValue === undefined) return 1;
+        if (bValue === undefined) return -1;
+
+        // Handle string values
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          return sortConfig.direction === "ascending"
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
         }
-        return 0;
+
+        // Handle numeric values
+        const aCompare = Number(aValue);
+        const bCompare = Number(bValue);
+
+        if (sortConfig.direction === "ascending") {
+          return aCompare - bCompare;
+        } else {
+          return bCompare - aCompare;
+        }
       });
     }
 
@@ -138,6 +147,8 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     sortConfig,
     initialInventory,
   ]);
+
+  console.log(filteredAndSortedData);
 
   const toggleItemSelection = (modelId: string) => {
     setSelectedItems((prevSelected) => {

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InventoryDashboardRow } from "@/lib/types";
+import dayjs from "dayjs";
 
 interface InventoryTableProps {
   filteredAndSortedData: InventoryDashboardRow[];
@@ -167,7 +168,7 @@ export function InventoryTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  {new Date(item.last_updated ?? new Date()).toLocaleString()}
+                  {dayjs(item.last_updated).format("YYYY-MM-DD HH:mm")}
                 </TableCell>
               </TableRow>
             ))}

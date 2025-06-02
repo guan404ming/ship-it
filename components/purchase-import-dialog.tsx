@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, useEffect, useRef, FormEvent, ReactNode } from "react";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -51,7 +51,7 @@ interface LocalModelItem {
 }
 
 interface PurchaseImportDialogProps {
-  trigger?: React.ReactNode;
+  trigger?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   selectedItems?: InventoryDashboardRow[];
@@ -227,7 +227,7 @@ export function PurchaseImportDialog({
   selectedItems = [],
 }: PurchaseImportDialogProps) {
   const router = useRouter();
-  const [orderItems, setOrderItems] = React.useState<LocalPurchaseItem[]>([
+  const [orderItems, setOrderItems] = useState<LocalPurchaseItem[]>([
     {
       id: 1,
       isVisible: true,
@@ -243,36 +243,33 @@ export function PurchaseImportDialog({
       models: [{ id: 1, name: "", quantity: 1 }],
     },
   ]);
-  const [totalItems, setTotalItems] = React.useState(2);
-  const [totalQuantity, setTotalQuantity] = React.useState(100);
-  const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
-  const [supplierId, setSupplierId] = React.useState<number | null>(null);
-  const [orderDate, setOrderDate] = React.useState<string>(() => {
-    // Set default order date to today
+  const [totalItems, setTotalItems] = useState(2);
+  const [totalQuantity, setTotalQuantity] = useState(100);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierId, setSupplierId] = useState<number | null>(null);
+  const [orderDate, setOrderDate] = useState<string>(() => {
     const today = new Date();
-    return today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    return today.toISOString().split("T")[0];
   });
-  const [expectedDeliveryDays, setExpectedDeliveryDays] =
-    React.useState<number>(7); // Default to 7 days
-  const [expectedDeliveryDate, setExpectedDeliveryDate] =
-    React.useState<string>(() => {
-      // Calculate default expected delivery date (7 days from today)
+  const [expectedDeliveryDays, setExpectedDeliveryDays] = useState<number>(7);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>(
+    () => {
       const date = new Date();
       date.setDate(date.getDate() + 7);
-      return date.toISOString().split("T")[0]; // Format: YYYY-MM-DD
-    });
+      return date.toISOString().split("T")[0];
+    }
+  );
 
-  // Use a ref to track if we've already processed the selected items to prevent infinite loops
-  const processedRef = React.useRef(false);
-  const selectedItemsRef = React.useRef(selectedItems);
+  const processedRef = useRef(false);
+  const selectedItemsRef = useRef(selectedItems);
 
   // Store selectedItems in a ref to avoid dependency issues
-  React.useEffect(() => {
+  useEffect(() => {
     selectedItemsRef.current = selectedItems;
   }, [selectedItems]);
 
   // Fetch suppliers when dialog opens
-  React.useEffect(() => {
+  useEffect(() => {
     async function fetchSuppliers() {
       if (open) {
         try {
@@ -288,7 +285,7 @@ export function PurchaseImportDialog({
   }, [open]);
 
   // Initialize order items from selected inventory items when the dialog opens
-  React.useEffect(() => {
+  useEffect(() => {
     // Reset the ref when dialog opens/closes
     if (!open) {
       processedRef.current = false;
@@ -302,15 +299,8 @@ export function PurchaseImportDialog({
           quantity: 50,
           models: [{ id: 1, name: "", quantity: 1 }],
         },
-        {
-          id: 2,
-          isVisible: true,
-          product_name: "",
-          quantity: 50,
-          models: [{ id: 1, name: "", quantity: 1 }],
-        },
       ]);
-      setTotalItems(2);
+      setTotalItems(1);
       return;
     }
 
@@ -363,7 +353,7 @@ export function PurchaseImportDialog({
   }, [open]);
 
   // Calculate total quantity whenever orderItems changes
-  React.useEffect(() => {
+  useEffect(() => {
     // Use a comparison to prevent unnecessary state updates that could cause infinite loops
     const newTotalQuantity = orderItems.reduce(
       (sum, item) =>
@@ -378,7 +368,7 @@ export function PurchaseImportDialog({
   }, [orderItems, totalQuantity]);
 
   // Update expected delivery date when order date or expected delivery days change
-  React.useEffect(() => {
+  useEffect(() => {
     const date = new Date(orderDate);
     date.setDate(date.getDate() + expectedDeliveryDays);
     setExpectedDeliveryDate(date.toISOString().split("T")[0]);
@@ -501,9 +491,7 @@ export function PurchaseImportDialog({
 
   const updateItemNote = (id: number, note: string) => {
     setOrderItems(
-      orderItems.map((item) =>
-        item.id === id ? { ...item, note } : item
-      )
+      orderItems.map((item) => (item.id === id ? { ...item, note } : item))
     );
   };
 
@@ -513,7 +501,7 @@ export function PurchaseImportDialog({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!supplierId) {
@@ -557,7 +545,9 @@ export function PurchaseImportDialog({
           );
 
           if (!ids) {
-            toast.error(`找不到 ${item.product_name} - ${model.name} 對應的資料`);
+            toast.error(
+              `找不到 ${item.product_name} - ${model.name} 對應的資料`
+            );
             console.error("找不到 product/model id:", item, model);
             return;
           }
@@ -565,7 +555,7 @@ export function PurchaseImportDialog({
           itemsForBatch.push({
             model_id: ids.model_id,
             quantity: model.quantity,
-            note: item.note ?? null
+            note: item.note ?? null,
           });
         }
       }

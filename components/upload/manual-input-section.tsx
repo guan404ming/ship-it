@@ -208,25 +208,27 @@ export function ManualInputSection({
       } catch (error) {
         toast.error(`發生錯誤，請稍後再試: ${error}`);
       }
-      resetForm();
-      return;
-    }
-    // 非 order 模式，維持原本 upsertStockRecord 行為
-    try {
-      await Promise.all(
-        models.map(async (model) => {
-          const { model_id } = await getProductAndModelIdByName(
-            productName,
-            model.modelName
-          );
-          await upsertStockRecord(model_id, true, parseInt(model.quantity, 10));
-          toast.success(
-            `成功新增商品: ${productName} 規格: ${model.modelName} 數量: ${model.quantity}`
-          );
-        })
-      );
-    } catch (error) {
-      toast.error(`發生錯誤，請稍後再試: ${error}`);
+    } else {
+      try {
+        await Promise.all(
+          models.map(async (model) => {
+            const { model_id } = await getProductAndModelIdByName(
+              productName,
+              model.modelName
+            );
+            await upsertStockRecord(
+              model_id,
+              true,
+              parseInt(model.quantity, 10)
+            );
+            toast.success(
+              `成功新增商品: ${productName} 規格: ${model.modelName} 數量: ${model.quantity}`
+            );
+          })
+        );
+      } catch (error) {
+        toast.error(`發生錯誤，請稍後再試: ${error}`);
+      }
     }
     resetForm();
   };
@@ -240,28 +242,28 @@ export function ManualInputSection({
             <div className="flex items-center">
               <Input
                 type="radio"
-                id="order-manual"
+                id="order"
                 name="import-type-right"
                 value="order"
                 className="h-4 w-4"
                 onChange={onManualImportTypeChange}
                 checked={manualImportType === "order"}
               />
-              <Label htmlFor="order-manual" className="ml-2">
+              <Label htmlFor="order" className="ml-2">
                 銷售匯入
               </Label>
             </div>
             <div className="flex items-center">
               <Input
                 type="radio"
-                id="inventory-manual"
+                id="inventory"
                 name="import-type-right"
                 value="inventory"
                 className="h-4 w-4"
                 onChange={onManualImportTypeChange}
                 checked={manualImportType === "inventory"}
               />
-              <Label htmlFor="inventory-manual" className="ml-2">
+              <Label htmlFor="inventory" className="ml-2">
                 庫存匯入
               </Label>
             </div>

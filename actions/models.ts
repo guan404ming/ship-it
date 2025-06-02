@@ -22,7 +22,8 @@ export async function createModel(modelName: string, productId: number) {
     .single();
 
   if (createModelError || !newModel) {
-    throw new Error("Failed to create model");
+    console.error("Failed to create model", createModelError);
+    throw new Error("Failed to create model", { cause: createModelError });
   }
 
   return newModel;

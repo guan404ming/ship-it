@@ -19,6 +19,7 @@ import { parseCSV, type CSVRow } from "@/lib/csv-parser";
 import { upsertStockRecord } from "@/actions/stock_record";
 import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
+import { createOrder } from "@/actions/orders";
 
 interface FileUploadSectionProps {
   fileImportType: string | null;
@@ -142,21 +143,50 @@ export function FileUploadSection({
     setUploadMessage(null);
 
     try {
-      await Promise.all(
-        csvData.map(async (row) => {
-          const { model_id } = await getProductAndModelIdByName(
-            row["商品名稱"],
-            row["商品規格"]
-          );
+      if (fileImportType === "inventory") {
+        await Promise.all(
+          csvData.map(async (row) => {
+            const { model_id } = await getProductAndModelIdByName(
+              row["商品名稱"],
+              row["商品規格"]
+            );
 
-          await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
+            await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
+          })
+        );
+        toast.success("成功更新庫存，共 " + csvData.length + " 筆");
+      } else {
+        const items = await Promise.all(
+          csvData.map(async (row) => {
+            const { product_id, model_id } = await getProductAndModelIdByName(
+              row["商品名稱"],
+              row["商品規格"]
+            );
+            return {
+              product_id,
+              model_id,
+              quantity: parseInt(row["數量"], 10),
+              returned_quantity: 0,
+              sold_price: parseFloat(row["單價"]),
+              total_price: parseFloat(row["單價"]) * parseInt(row["數量"], 10),
+            };
+          })
+        );
 
-          toast.success(
-            `成功新增商品: ${row["商品名稱"]} 規格: ${row["商品規格"]} 數量: ${row["數量"]}`
-          );
-        })
-      );
+        csvData.forEach(async (row, index) => {
+          await createOrder({
+            buyer_id: 1,
+            product_total_price:
+              parseFloat(row["單價"]) * parseInt(row["數量"], 10),
+            shipping_fee: 0,
+            total_paid: parseFloat(row["單價"]) * parseInt(row["數量"], 10),
+            order_status: "pending",
+            items: [items[index]],
+          });
+        });
 
+        toast.success("成功建立訂單，共 " + csvData.length + " 筆");
+      }
       setUploadSuccess(true);
       setUploadMessage("匯入成功！");
       resetCsvData();
@@ -182,28 +212,28 @@ export function FileUploadSection({
               <div className="flex items-center">
                 <Input
                   type="radio"
-                  id="batch-import"
+                  id="order"
                   name="import-type-left"
-                  value="batch"
+                  value="order"
                   className="h-4 w-4"
                   onChange={onFileImportTypeChange}
-                  checked={fileImportType === "batch"}
+                  checked={fileImportType === "order"}
                 />
-                <Label htmlFor="batch-import" className="ml-2">
+                <Label htmlFor="order" className="ml-2">
                   銷售匯入
                 </Label>
               </div>
               <div className="flex items-center">
                 <Input
                   type="radio"
-                  id="single-import"
+                  id="inventory"
                   name="import-type-left"
-                  value="single"
+                  value="inventory"
                   className="h-4 w-4"
                   onChange={onFileImportTypeChange}
-                  checked={fileImportType === "single"}
+                  checked={fileImportType === "inventory"}
                 />
-                <Label htmlFor="single-import" className="ml-2">
+                <Label htmlFor="inventory" className="ml-2">
                   庫存匯入
                 </Label>
               </div>

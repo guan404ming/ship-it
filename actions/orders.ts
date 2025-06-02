@@ -7,6 +7,7 @@ import { OrderStatus } from "@/lib/types";
 
 // Type for order input (extends the base Order type with custom fields)
 type OrderInput = {
+  order_id?: string;
   buyer_id: number;
   product_total_price: number;
   shipping_fee: number;
@@ -41,23 +42,25 @@ export async function createOrder(input: OrderInput) {
     const { items, ...orderData } = input;
 
     // Generate a unique order_id (e.g., 'ORD' + YYYYMMDDHHMMSS + random 4 digits)
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const dateStr =
-      now.getFullYear().toString() +
-      pad(now.getMonth() + 1) +
-      pad(now.getDate()) +
-      pad(now.getHours()) +
-      pad(now.getMinutes()) +
-      pad(now.getSeconds());
-    const randomStr = Math.floor(1000 + Math.random() * 9000).toString();
-    const order_id = `ORD${dateStr}${randomStr}`;
+    if (!input.order_id) {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const dateStr =
+        now.getFullYear().toString() +
+        pad(now.getMonth() + 1) +
+        pad(now.getDate()) +
+        pad(now.getHours()) +
+        pad(now.getMinutes()) +
+        pad(now.getSeconds());
+      const randomStr = Math.floor(1000 + Math.random() * 9000).toString();
+      input.order_id = `ORD${dateStr}${randomStr}`;
+    }
 
     // Insert order using spread syntax for cleaner code
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        order_id,
+        order_id: input.order_id,
         ...orderData,
         created_at: new Date().toISOString(),
         payment_time: orderData.payment_time ?? null,

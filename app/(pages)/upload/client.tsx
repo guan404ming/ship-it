@@ -12,27 +12,29 @@ import { importHistory as mockImportHistory } from "@/lib/data/import-data";
 
 export default function InventoryClient() {
   const searchParams = useSearchParams();
-  const [fileImportType, setFileImportType] = useState<string | null>(null);
-  const [manualImportType, setManualImportType] = useState<string | null>(
+  const [fileImportType, setFileImportType] = useState<"inventory" | "order">(
     "order"
   );
+  const [manualImportType, setManualImportType] = useState<
+    "inventory" | "order"
+  >("order");
 
   useEffect(() => {
     const type = searchParams.get("type");
     if (type === "inventory") {
-      setFileImportType("single");
+      setFileImportType("inventory");
       setManualImportType("inventory");
     }
   }, [searchParams]);
 
   const handleFileImportTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setFileImportType(event.target.value);
+    setFileImportType(event.target.value as "inventory" | "order");
   };
 
   const handleManualImportTypeChange = (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    setManualImportType(event.target.value);
+    setManualImportType(event.target.value as "inventory" | "order");
   };
 
   return (

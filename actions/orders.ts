@@ -2,18 +2,17 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { createClient as createClientBrowser } from '@supabase/supabase-js'
-import { Database } from '@/database.types'
 
 import { OrderStatus } from "@/lib/types";
 
+// Type for order input (extends the base Order type with custom fields)
 type OrderInput = {
   order_id: string
   buyer_id: number
   product_total_price: number
   shipping_fee: number
   total_paid: number
-  order_status: 'pending' | 'shipped' | 'delivered' | 'confirmed' | 'confirmed_in_trial' | 'canceled'
+  order_status: OrderStatus
   payment_time?: string
   shipped_at?: string
   completed_at?: string
@@ -34,38 +33,31 @@ interface OrderUpdateData {
   cancel_reason?: string;
 }
 
-const db = createClientBrowser<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export async function createOrderFromInput(input: OrderInput) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
   try {
-    const { error: orderError } = await db.from('orders').insert({
-      order_id: input.order_id,
-      buyer_id: input.buyer_id,
-      product_total_price: input.product_total_price,
-      shipping_fee: input.shipping_fee,
-      total_paid: input.total_paid,
-      order_status: input.order_status,
+    // Destructure to separate items from order data
+    const { items, ...orderData } = input;
+    
+    // Insert order using spread syntax for cleaner code
+    const { error: orderError } = await supabase.from('orders').insert({
+      ...orderData,
       created_at: new Date().toISOString(),
-      payment_time: input.payment_time ?? null,
-      shipped_at: input.shipped_at ?? null,
-      completed_at: input.completed_at ?? null
+      payment_time: orderData.payment_time ?? null,
+      shipped_at: orderData.shipped_at ?? null,
+      completed_at: orderData.completed_at ?? null,
     })
     if (orderError) throw orderError
 
-    const orderItems = input.items.map(item => ({
-      order_id: input.order_id,
-      product_id: item.product_id,
-      model_id: item.model_id,
-      quantity: item.quantity,
-      returned_quantity: item.returned_quantity,
-      sold_price: item.sold_price,
-      total_price: item.total_price
+    // Insert order items using spread syntax
+    const orderItems = items.map(item => ({
+      ...item,
+      order_id: input.order_id
     }))
 
-    const { error: orderItemsError } = await db.from('order_items').insert(orderItems)
+    const { error: orderItemsError } = await supabase.from('order_items').insert(orderItems)
     if (orderItemsError) throw orderItemsError
 
     return { success: true }
@@ -114,6 +106,7 @@ export async function createOrder(
 
   if (orderError) throw orderError;
 
+  // Use spread syntax for cleaner mapping
   const orderItems = items.map((item) => ({
     order_id: order.order_id,
     product_id: item.productId,
@@ -121,6 +114,7 @@ export async function createOrder(
     quantity: item.quantity,
     sold_price: item.soldPrice,
     total_price: item.soldPrice * item.quantity,
+    returned_quantity: 0, // Default value
   }));
 
   const { error: itemsError } = await supabase

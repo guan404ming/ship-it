@@ -10,8 +10,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
 import { Textarea } from "@/components/ui/textarea";
-import { createPurchaseBatch, addPurchaseItem } from "@/actions/purchase";
+import { createPurchaseBatch } from "@/actions/purchase";
 import { getSuppliers, type Supplier } from "@/actions/suppliers";
+import { getProductAndModelIdByNames } from "@/actions/products";
 import { InventoryDashboardRow } from "@/lib/types";
 import {
   Dialog,
@@ -108,6 +109,7 @@ type ProductCardProps = {
   onUpdateModelName: (modelId: number, name: string) => void;
   onUpdateModelQuantity: (modelId: number, quantity: number) => void;
   onRemoveModel: (modelId: number) => void;
+  onNoteChange: (value: string) => void;
   onDelete: () => void;
 };
 
@@ -118,6 +120,7 @@ const ProductCard = ({
   onUpdateModelName,
   onUpdateModelQuantity,
   onRemoveModel,
+  onNoteChange,
   onDelete,
 }: ProductCardProps) => {
   return (
@@ -209,6 +212,8 @@ const ProductCard = ({
         <Textarea
           placeholder="輸入備註或描述商品的相關訊息..."
           className="min-h-[80px]"
+          value={item.note}
+          onChange={(e) => onNoteChange(e.target.value)}
         />
       </div>
     </Card>
@@ -402,6 +407,7 @@ export function PurchaseImportDialog({
     setOrderItems(orderItems.filter((item) => item.id !== id));
     setTotalItems(totalItems - 1);
   };
+
   const handleProductNameChange = (id: number, value: string) => {
     setOrderItems(
       orderItems.map((item) =>
@@ -493,6 +499,14 @@ export function PurchaseImportDialog({
     );
   };
 
+  const updateItemNote = (id: number, note: string) => {
+    setOrderItems(
+      orderItems.map((item) =>
+        item.id === id ? { ...item, note } : item
+      )
+    );
+  };
+
   const handleCancel = () => {
     if (onOpenChange) {
       onOpenChange(false);
@@ -533,43 +547,48 @@ export function PurchaseImportDialog({
     }
 
     try {
+      const itemsForBatch = [];
+
+      for (const item of orderItems) {
+        for (const model of item.models) {
+          const ids = await getProductAndModelIdByNames(
+            item.product_name,
+            model.name
+          );
+
+          if (!ids) {
+            toast.error(`找不到 ${item.product_name} - ${model.name} 對應的資料`);
+            console.error("找不到 product/model id:", item, model);
+            return;
+          }
+
+          itemsForBatch.push({
+            model_id: ids.model_id,
+            quantity: model.quantity,
+            note: item.note ?? null
+          });
+        }
+      }
+
       const batch = await createPurchaseBatch(
         supplierId,
         orderDate,
         expectedDeliveryDate,
-        orderItems.map((item) => ({
-          model_id: item.models[0].id,
-          quantity: item.quantity,
-          unit_cost: 0,
-        }))
+        itemsForBatch
       );
 
-      if (!batch || !batch.id) {
+      if (!batch || !batch.batch_id) {
         toast.error("建立叫貨批次失敗");
         return;
       }
 
-      for (const item of orderItems) {
-        for (const model of item.models) {
-          const modelIdToUse = item.model_id || model.id;
-
-          if (!modelIdToUse) {
-            toast.error(
-              `品項 ${item.product_name} 的規格 ${model.name} 缺少有效的 model_id`
-            );
-            console.error("Missing model_id for item:", item, "model:", model);
-            continue;
-          }
-
-          await addPurchaseItem(batch.id, modelIdToUse, model.quantity, 0);
-        }
-      }
-
       toast.success("叫貨單已成功建立！");
-      router.refresh();
-      if (onOpenChange) {
-        onOpenChange(false);
-      }
+      setTimeout(() => {
+        router.refresh();
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
+      }, 300);
     } catch (error) {
       console.error("叫貨失敗:", error);
       toast.error(
@@ -671,6 +690,7 @@ export function PurchaseImportDialog({
                 updateModelQuantity(item.id, modelId, quantity)
               }
               onRemoveModel={(modelId) => removeModel(item.id, modelId)}
+              onNoteChange={(note) => updateItemNote(item.id, note)}
               onDelete={() => deleteItem(item.id)}
             />
           ))}

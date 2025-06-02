@@ -6,6 +6,7 @@ import { LoginForm } from "@/components/login-form";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { useSession } from "next-auth/react";
+import { Toaster } from "sonner";
 
 export default function PagesLayout({
   children,
@@ -41,6 +42,7 @@ export default function PagesLayout({
         <SiteHeader />
         <div className="flex flex-col items-center justify-center h-full w-full">
           {children}
+          <Toaster />
         </div>
       </SidebarInset>
     </SidebarProvider>

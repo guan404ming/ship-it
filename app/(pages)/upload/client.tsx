@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -23,14 +23,12 @@ export default function InventoryClient() {
     }
   }, [searchParams]);
 
-  const handleFileImportTypeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileImportTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFileImportType(event.target.value);
   };
 
   const handleManualImportTypeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) => {
     setManualImportType(event.target.value);
   };

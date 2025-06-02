@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import type { PurchaseDashboardRow, PurchaseFormData } from "@/lib/types";
-import { updateStockRecord } from "./stock_record";
+import { upsertStockRecord } from "./stock_record";
 
 export async function createPurchaseBatch(
   supplierId: number,
@@ -161,7 +161,7 @@ export async function updatePurchaseBatchStatus(
 
         // update stock_quantity
         for (const item of purchaseItems) {
-          await updateStockRecord(item.model_id, true, item.quantity);
+          await upsertStockRecord(item.model_id, true, item.quantity);
         }
       }
 

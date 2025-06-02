@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
-export async function updateStockRecord(
+export async function upsertStockRecord(
   model_id: number,
   isIncrease: boolean,
   quantity_delta: number
 ) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
-  // get current stock_quantity
+
   const { data: stock_record, error: stock_record_error } = await supabase
     .from("stock_records")
     .select("stock_quantity")
@@ -17,19 +17,26 @@ export async function updateStockRecord(
 
   if (stock_record_error) throw stock_record_error;
 
-  let stock_quantity = stock_record.stock_quantity;
+  if (!stock_record?.stock_quantity) {
+    const { error: new_stock_record_error } = await supabase
+      .from("stock_records")
+      .insert({
+        model_id,
+        stock_quantity: 0 + quantity_delta * (isIncrease ? 1 : -1),
+      })
+      .select("stock_quantity")
+      .single();
 
-  if (isIncrease) {
-    stock_quantity = stock_quantity + quantity_delta;
+    if (new_stock_record_error) throw new_stock_record_error;
   } else {
-    stock_quantity = stock_quantity - quantity_delta;
+    const { error: update_error } = await supabase
+      .from("stock_records")
+      .update({
+        stock_quantity:
+          stock_record.stock_quantity + quantity_delta * (isIncrease ? 1 : -1),
+      })
+      .eq("model_id", model_id);
+
+    if (update_error) throw update_error;
   }
-
-  const { error: update_error } = await supabase
-    .from("stock_records")
-    .update({ stock_quantity })
-    .eq("model_id", model_id);
-
-  if (update_error) throw update_error;
-  return { success: true, stock_quantity: stock_quantity };
 }

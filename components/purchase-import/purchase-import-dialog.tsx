@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { createPurchaseBatch } from "@/actions/purchase";
 import { getSuppliers, type Supplier } from "@/actions/suppliers";
-import { getProductAndModelIdByNames } from "@/actions/products";
+import { getProductAndModelIdByName } from "@/actions/products";
 import {
   Dialog,
   DialogContent,
@@ -117,7 +117,7 @@ export function PurchaseImportDialog({
       const itemsForBatch = await Promise.all(
         items.flatMap((item) =>
           item.models.map(async (model) => {
-            const { model_id } = await getProductAndModelIdByNames(
+            const { model_id } = await getProductAndModelIdByName(
               item.product_name,
               model.name
             );

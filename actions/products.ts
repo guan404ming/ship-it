@@ -42,7 +42,7 @@ export async function createProduct(productName: string) {
   return newProduct;
 }
 
-export async function getProductAndModelIdByNames(
+export async function getProductAndModelIdByName(
   productName: string,
   modelName: string
 ): Promise<{ product_id: number; model_id: number }> {

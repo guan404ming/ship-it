@@ -7,24 +7,23 @@ import { OrderStatus } from "@/lib/types";
 
 // Type for order input (extends the base Order type with custom fields)
 type OrderInput = {
-  order_id: string
-  buyer_id: number
-  product_total_price: number
-  shipping_fee: number
-  total_paid: number
-  order_status: OrderStatus
-  payment_time?: string
-  shipped_at?: string
-  completed_at?: string
+  buyer_id: number;
+  product_total_price: number;
+  shipping_fee: number;
+  total_paid: number;
+  order_status: OrderStatus;
+  payment_time?: string;
+  shipped_at?: string;
+  completed_at?: string;
   items: Array<{
-    product_id: number
-    model_id: number
-    quantity: number
-    returned_quantity: number
-    sold_price: number
-    total_price: number
-  }>
-}
+    product_id: number;
+    model_id: number;
+    quantity: number;
+    returned_quantity: number;
+    sold_price: number;
+    total_price: number;
+  }>;
+};
 
 interface OrderUpdateData {
   order_status: OrderStatus;
@@ -40,33 +39,36 @@ export async function createOrderFromInput(input: OrderInput) {
   try {
     // Destructure to separate items from order data
     const { items, ...orderData } = input;
-    
+
     // Insert order using spread syntax for cleaner code
-    const { error: orderError } = await supabase.from('orders').insert({
-      ...orderData,
-      created_at: new Date().toISOString(),
-      payment_time: orderData.payment_time ?? null,
-      shipped_at: orderData.shipped_at ?? null,
-      completed_at: orderData.completed_at ?? null,
-    })
-    if (orderError) throw orderError
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        ...orderData,
+        created_at: new Date().toISOString(),
+        payment_time: orderData.payment_time ?? null,
+        shipped_at: orderData.shipped_at ?? null,
+        completed_at: orderData.completed_at ?? null,
+      })
+      .select()
+      .single();
+    if (orderError || !order) throw orderError;
 
     // Insert order items using spread syntax
-    const orderItems = items.map(item => ({
+    const orderItems = items.map((item) => ({
       ...item,
-      order_id: input.order_id
-    }))
+      order_id: order.order_id,
+    }));
 
-    const { error: orderItemsError } = await supabase.from('order_items').insert(orderItems)
-    if (orderItemsError) throw orderItemsError
+    const { error: orderItemsError } = await supabase
+      .from("order_items")
+      .insert(orderItems);
+    if (orderItemsError) throw orderItemsError;
 
-    return { success: true }
+    return order;
   } catch (error) {
-    console.error('Error creating order:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    console.error("Error creating order:", error);
+    throw error;
   }
 }
 
@@ -114,7 +116,7 @@ export async function createOrder(
     quantity: item.quantity,
     sold_price: item.soldPrice,
     total_price: item.soldPrice * item.quantity,
-    returned_quantity: 0, // Default value
+    returned_quantity: 0,
   }));
 
   const { error: itemsError } = await supabase

@@ -40,7 +40,7 @@ export type InventoryDashboardRow = {
   supplier_name: string;
   supplier_id: number;
   remaining_days: number;
-  has_recent_purchase: boolean;
+  has_active_purchase: boolean;
 };
 
 export type PurchaseDashboardRow = {

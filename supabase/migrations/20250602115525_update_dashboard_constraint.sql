@@ -19,8 +19,14 @@ select distinct
     end
   ), 0) as sales_30d,
 
-  -- Purchased in the past 7 days
-  bool_or(pb.created_at >= now() - interval '7 day') as has_recent_purchase
+  -- Check if there are any pending purchase orders for this model
+  exists (
+    select 1 
+    from purchase_items pi2
+    join purchase_batches pb2 on pi2.batch_id = pb2.batch_id
+    where pi2.model_id = sr.model_id
+    and pb2.status = 'pending'
+  ) as has_active_purchase
 
 from stock_records sr
 left join product_models pm on sr.model_id = pm.model_id

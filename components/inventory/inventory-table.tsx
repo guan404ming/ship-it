@@ -151,22 +151,22 @@ export function InventoryTable({
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-all hover:shadow-sm ${
-                      item.has_recent_purchase
+                      item.has_active_purchase
                         ? "bg-gray-50 text-gray-600 hover:bg-gray-100"
                         : "text-white bg-slate-500 hover:bg-slate-600"
                     } ${
                       orderStatusFilter ===
-                      (item.has_recent_purchase ? "已叫貨" : "未叫貨")
+                      (item.has_active_purchase ? "已叫貨" : "未叫貨")
                         ? "ring-2 ring-offset-1"
                         : ""
                     }`}
                     onClick={() =>
                       onOrderStatusFilter(
-                        item.has_recent_purchase ? "已叫貨" : "未叫貨"
+                        item.has_active_purchase ? "已叫貨" : "未叫貨"
                       )
                     }
                   >
-                    {item.has_recent_purchase ? "已叫貨" : "未叫貨"}
+                    {item.has_active_purchase ? "已叫貨" : "未叫貨"}
                   </span>
                 </TableCell>
                 <TableCell>

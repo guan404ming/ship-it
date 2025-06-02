@@ -80,9 +80,9 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
       ...item,
       supplier_name: item.supplier_name || "未知廠商",
       remaining_days: item.remaining_days || 0,
-      has_recent_purchase:
-        item.has_recent_purchase !== undefined
-          ? item.has_recent_purchase
+      has_active_purchase:
+        item.has_active_purchase !== undefined
+          ? item.has_active_purchase
           : false,
     }));
 
@@ -111,9 +111,9 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     if (orderStatusFilter !== "所有狀態") {
       filteredData = filteredData.filter((item) => {
         if (orderStatusFilter === "已叫貨")
-          return item.has_recent_purchase === true;
+          return item.has_active_purchase === true;
         if (orderStatusFilter === "未叫貨")
-          return item.has_recent_purchase === false;
+          return item.has_active_purchase === false;
         return true;
       });
     }

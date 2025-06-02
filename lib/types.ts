@@ -38,6 +38,7 @@ export type InventoryDashboardRow = {
   stock_quantity: number;
   last_updated: string;
   supplier_name: string;
+  supplier_id: number;
   remaining_days: number;
   is_ordered: boolean;
 };

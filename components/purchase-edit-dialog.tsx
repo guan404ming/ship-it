@@ -54,7 +54,6 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
       );
 
       if (purchaseItem) {
-        console.log("purchaseItem", purchaseItem);
         setFormData({
           item_id: purchaseItem.item_id,
           supplier_name: purchaseItem.supplier_name || "",

@@ -44,7 +44,9 @@ export function PurchaseImportDialog({
   const router = useRouter();
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [supplierId, setSupplierId] = useState<number | null>(null);
+  const [supplierId, setSupplierId] = useState<number | null>(
+    selectedItems[0]?.supplier_id ?? null
+  );
   const [orderDate, setOrderDate] = useState(
     () => new Date().toISOString().split("T")[0]
   );
@@ -80,6 +82,15 @@ export function PurchaseImportDialog({
         });
     }
   }, [open]);
+
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      const defaultSupplier = suppliers.find(
+        (s) => s.supplier_name === selectedItems[0]?.supplier_name
+      );
+      setSupplierId(defaultSupplier?.supplier_id ?? null);
+    }
+  }, [suppliers, selectedItems]);
 
   // Update expected delivery date
   useEffect(() => {

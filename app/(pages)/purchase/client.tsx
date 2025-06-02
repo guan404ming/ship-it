@@ -27,8 +27,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PurchaseImportDialog } from "@/components/purchase-import/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
 import { PurchaseDashboardRow } from "@/lib/types";
-import { formatDate } from "@/lib/date-utils";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
+import dayjs from "dayjs";
 
 interface PurchaseTempClientProps {
   initialPurchase: PurchaseDashboardRow[];
@@ -342,8 +342,12 @@ export default function PurchaseClient({
                       <TableCell className="text-right font-mono">
                         {item.quantity}
                       </TableCell>
-                      <TableCell>{formatDate(item.created_at)}</TableCell>
-                      <TableCell>{formatDate(item.expect_date)}</TableCell>
+                      <TableCell>
+                        {dayjs(item.created_at).format("YYYY-MM-DD")}
+                      </TableCell>
+                      <TableCell>
+                        {dayjs(item.expect_date).format("YYYY-MM-DD")}
+                      </TableCell>
                       <TableCell>{item.note || "-"}</TableCell>
                       <TableCell>
                         <PurchaseEditDialog

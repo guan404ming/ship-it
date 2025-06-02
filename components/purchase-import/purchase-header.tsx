@@ -38,7 +38,7 @@ export const PurchaseHeader = ({
         required
         defaultValue={supplierId?.toString() ?? ""}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue placeholder="請選擇廠商" />
         </SelectTrigger>
         <SelectContent>

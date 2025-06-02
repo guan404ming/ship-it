@@ -23,11 +23,7 @@ import {
 
 import { ImportHistory } from "@/lib/types";
 import { importHistory as mockImportHistory } from "@/lib/data/import-data";
-
-// CSV parsing types
-interface CSVRow {
-  [key: string]: string;
-}
+import { parseCSV, type CSVRow } from "@/lib/csv-parser";
 
 // Create a client component that uses useSearchParams
 function UploadContent() {
@@ -65,6 +61,7 @@ function UploadContent() {
   // csvHeaders 和 csvData 用於存儲 CSV 檔案的標頭和資料
   const [csvHeaders, setCsvHeaders] = React.useState<string[]>([]);
   const [csvData, setCsvData] = React.useState<CSVRow[]>([]);
+  // columnTypes 用於存儲每個欄位的類型
   const [columnTypes, setColumnTypes] = React.useState<Record<string, string>>({});
   const [csvError, setCsvError] = React.useState<string | null>(null);
   const [isDragging, setIsDragging] = React.useState<boolean>(false);
@@ -129,10 +126,14 @@ function UploadContent() {
       reader.onload = (e) => {
         try {
           const text = e.target?.result as string;
-          parseCSV(text);
+          const result = parseCSV(text);
+          setCsvHeaders(result.headers);
+          setCsvData(result.data);
+          setColumnTypes(result.columnTypes);
+          setCsvError(null);
         } catch (err) {
-          console.error('File reading error:', err);
-          setCsvError('無法讀取檔案內容');
+          console.error('CSV parsing error:', err);
+          setCsvError(err instanceof Error ? err.message : '無法解析 CSV 檔案');
         } finally {
           setIsProcessing(false);
         }
@@ -162,234 +163,6 @@ function UploadContent() {
     setCsvError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
-    }
-  };
-
-  // Helper to detect delimiter in CSV
-  const detectDelimiter = (text: string): string => {
-    const firstLine = text.split(/\r?\n/)[0];
-    const delimiters = [',', ';', '\t'];
-    let bestDelimiter = ',';
-    let maxCount = 0;
-
-    delimiters.forEach(delimiter => {
-      const count = (firstLine.split(delimiter).length - 1);
-      if (count > maxCount) {
-        maxCount = count;
-        bestDelimiter = delimiter;
-      }
-    });
-
-    console.log('Detected delimiter:', bestDelimiter, 'with count:', maxCount);
-    return bestDelimiter;
-  };
-
-  // Function signature kept for reference (implementation is below)
-  // const cleanValue = (value: string): string => { ... };
-
-  // Helper to detect column data type
-  const detectColumnType = (values: string[]): string => {
-    let hasNumbers = 0;
-    let hasNonNumbers = 0;
-    let hasDate = 0;
-    
-    for (const value of values) {
-      if (!value.trim()) continue; // Skip empty cells
-      
-      // Check if it's a date (matches common date formats)
-      if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(value) || 
-          /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(value) ||
-          /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2}$/.test(value)) {
-        hasDate++;
-        continue;
-      }
-      
-      // Check if it's a number
-      if (!isNaN(Number(value))) {
-        hasNumbers++;
-      } else {
-        hasNonNumbers++;
-      }
-    }
-    
-    // Determine most likely type
-    if (hasDate > Math.max(hasNumbers, hasNonNumbers)) {
-      return '日期';
-    } else if (hasNumbers > 0 && hasNonNumbers === 0) {
-      return '數字';
-    } else {
-      return '文字';
-    }
-  };
-
-  // 解析單行CSV，正確處理引號和逗號
-  const parseCSVLine = (line: string, delimiter: string): string[] => {
-    const values: string[] = [];
-    let currentValue = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const nextChar = i + 1 < line.length ? line[i + 1] : '';
-      
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          // 處理連續兩個引號 - 表示轉義的引號
-          currentValue += '"';
-          i++; // 跳過下一個引號
-        } else {
-          // 切換引號狀態
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        // 只有在不在引號內時才視為分隔符
-        values.push(cleanValue(currentValue));
-        currentValue = '';
-      } else {
-        currentValue += char;
-      }
-    }
-    
-    // 添加最後一個值
-    values.push(cleanValue(currentValue));
-    
-    return values;
-  };
-
-  // Helper to clean CSV values - 升級版，處理更複雜的情況
-  const cleanValue = (value: string): string => {
-    // 移除前後空格
-    let cleaned = value.trim();
-    
-    // 移除開頭和結尾的引號（只有當它們成對出現時）
-    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
-        (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-      cleaned = cleaned.substring(1, cleaned.length - 1);
-    }
-    
-    // 處理轉義的引號 ("") -> (")
-    cleaned = cleaned.replace(/""/g, '"');
-    
-    // 移除值開頭和末尾的多餘逗號
-    cleaned = cleaned.replace(/^,+/, ''); // 移除開頭的逗號
-    cleaned = cleaned.replace(/,+$/, ''); // 移除末尾的逗號
-    
-    return cleaned;
-  };
-
-  const parseCSV = (csvText: string) => {
-    try {
-      console.log('CSV Text to parse:', csvText.substring(0, 200) + '...');
-      
-      // 移除 UTF-8 BOM (Byte Order Mark)，這在從 Excel 導出的 CSV 中很常見
-      let cleanedText = csvText;
-      if (csvText.charCodeAt(0) === 0xFEFF) {
-        cleanedText = csvText.substring(1);
-        console.log('BOM detected and removed');
-      }
-      
-      // 預處理文本，解決一些常見的CSV問題
-      cleanedText = cleanedText
-        .replace(/\r\n?/g, '\n')          // 統一換行符號為 \n
-        .replace(/,,+/g, ',')             // 替換連續多個逗號為單一逗號
-        .replace(/^,|,$/gm, '');          // 移除每行開頭和結尾的逗號
-      
-      // 檢測分隔符
-      const delimiter = detectDelimiter(cleanedText);
-      console.log('Detected delimiter:', delimiter);
-      
-      // 分割行 - 必須考慮引號內換行的情況
-      const lines: string[] = [];
-      let currentLine = '';
-      let inQuotes = false;
-      
-      // 逐字符處理文本，處理引號內的換行符
-      for (let i = 0; i < cleanedText.length; i++) {
-        const char = cleanedText[i];
-        const nextChar = i + 1 < cleanedText.length ? cleanedText[i + 1] : '';
-        
-        if (char === '"') {
-          // 檢查是否為轉義的引號 ("")
-          if (nextChar === '"') {
-            currentLine += '"'; // 添加一個引號並跳過下一個
-            i++;
-          } else {
-            inQuotes = !inQuotes; // 切換引號狀態
-            currentLine += char;
-          }
-        } else if (char === '\n' && !inQuotes) {
-          // 只有在不在引號內時才將當前行添加到行列表中
-          if (currentLine.trim()) {
-            lines.push(currentLine);
-          }
-          currentLine = '';
-        } else {
-          currentLine += char;
-        }
-      }
-      
-      // 添加最後一行
-      if (currentLine.trim()) {
-        lines.push(currentLine);
-      }
-      
-      console.log('Number of lines after processing:', lines.length);
-      
-      if (lines.length === 0) {
-        setCsvError('CSV 檔案沒有內容');
-        return;
-      }
-
-      // 解析標頭 - 需要正確處理帶引號的標頭
-      const headers = parseCSVLine(lines[0], delimiter);
-      console.log('Headers found:', headers);
-      setCsvHeaders(headers);
-
-      // 解析資料行
-      const parsedData: CSVRow[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i], delimiter);
-        
-        console.log(`Values for row ${i}:`, values);
-        
-        if (values.length !== headers.length) {
-          console.warn(`Skipping row ${i} due to column count mismatch: expected ${headers.length}, got ${values.length}`, values);
-          continue; // 跳過不符合標頭長度的行
-        }
-        
-        const dataRow: CSVRow = {};
-        headers.forEach((header, index) => {
-          dataRow[header] = values[index];
-        });
-        parsedData.push(dataRow);
-      }
-
-      console.log('Parsed data count:', parsedData.length);
-      if (parsedData.length > 0) {
-        console.log('First row sample:', parsedData[0]);
-      }
-
-      setCsvData(parsedData);
-      setCsvError(null);
-
-      // 檢查解析的數據是否合理
-      if (parsedData.length === 0) {
-        setCsvError('解析後沒有有效資料行');
-        return;
-      }
-
-      // 檢測並存儲每列的數據類型
-      const columnTypes: {[key: string]: string} = {};
-      headers.forEach(header => {
-        const columnValues = parsedData.map(row => row[header]);
-        columnTypes[header] = detectColumnType(columnValues);
-      });
-      setColumnTypes(columnTypes);
-      
-      console.log('Column types detected:', columnTypes);
-    } catch (error) {
-      console.error('Error parsing CSV:', error);
-      setCsvError(`解析 CSV 時發生錯誤: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 

@@ -43,13 +43,6 @@ export type InventoryDashboardRow = {
   has_recent_purchase: boolean;
 };
 
-// 用於我的叫貨
-export type MyInventory = Supplier &
-  Product &
-  ProductModel &
-  PurchaseItem &
-  PurchaseBatch;
-
 export type PurchaseDashboardRow = {
   item_id: number;
   quantity: number;
@@ -61,6 +54,7 @@ export type PurchaseDashboardRow = {
   model_name: string;
   product_name: string;
   note?: string;
+  unit_cost: number;
 };
 
 // 用於匯入歷史

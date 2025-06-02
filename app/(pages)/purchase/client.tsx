@@ -350,9 +350,7 @@ export default function PurchaseClient({
                       </TableCell>
                       <TableCell>{item.note || "-"}</TableCell>
                       <TableCell>
-                        <PurchaseEditDialog
-                          purchaseId={item.item_id.toString()}
-                        />
+                        <PurchaseEditDialog purchase={item} />
                       </TableCell>
                     </TableRow>
                   ))}

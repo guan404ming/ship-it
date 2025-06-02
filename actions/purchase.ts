@@ -133,6 +133,7 @@ export async function getPurchaseDashboardData(): Promise<
       model_name: pm.model_name,
       product_name: p.product_name,
       note: i.note ?? null,
+      unit_cost: i.unit_cost,
     };
   });
 }

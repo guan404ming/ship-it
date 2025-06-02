@@ -14,10 +14,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { purchaseOrderData } from "@/lib/data/purchase-data";
+import { PurchaseDashboardRow } from "@/lib/types";
 
 interface PurchaseEditDialogProps {
-  purchaseId: string;
+  purchase: PurchaseDashboardRow;
 }
 
 // Local interface for model items in the edit dialog
@@ -42,16 +42,14 @@ interface PurchaseFormData {
   batch_id?: number;
 }
 
-export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
+export function PurchaseEditDialog({ purchase }: PurchaseEditDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [formData, setFormData] = React.useState<PurchaseFormData | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (open && purchaseId) {
-      const purchaseItem = purchaseOrderData.find(
-        (item) => item.item_id.toString() === purchaseId
-      );
+    if (open && purchase) {
+      const purchaseItem = purchase;
 
       if (purchaseItem) {
         setFormData({
@@ -60,10 +58,7 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
           product_name: purchaseItem.product_name || "",
           model_name: purchaseItem.model_name || "",
           quantity: purchaseItem.quantity || 0,
-          unit_cost:
-            typeof purchaseItem.unit_cost === "number"
-              ? purchaseItem.unit_cost
-              : 0,
+          unit_cost: purchaseItem.unit_cost || 0,
           created_at: purchaseItem.created_at || "",
           expect_date: purchaseItem.expect_date || "",
           note: purchaseItem.note || "",
@@ -78,7 +73,7 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
         });
       }
     }
-  }, [open, purchaseId]);
+  }, [open, purchase]);
 
   const handleChange = (
     field: keyof PurchaseFormData,

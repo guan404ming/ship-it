@@ -338,6 +338,7 @@ export type Database = {
           stock_quantity: number | null
           supplier_id: number | null
           supplier_name: string | null
+          unit_cost: number | null
         }
         Relationships: [
           {

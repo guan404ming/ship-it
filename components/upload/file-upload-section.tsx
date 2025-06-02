@@ -16,6 +16,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { parseCSV, type CSVRow } from "@/lib/csv-parser";
+import { upsertStockRecord } from "@/actions/stock_record";
+import { getProductAndModelIdByName } from "@/actions/products";
+import { toast } from "sonner";
 
 interface FileUploadSectionProps {
   fileImportType: string | null;
@@ -139,35 +142,24 @@ export function FileUploadSection({
     setUploadMessage(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("importType", fileImportType);
-      formData.append("parsedData", JSON.stringify(csvData));
+      csvData.map(async (row) => {
+        const { model_id } = await getProductAndModelIdByName(
+          row["商品名稱"],
+          row["商品規格"]
+        );
 
-      if (noteRef.current?.value) {
-        formData.append("note", noteRef.current.value);
-      }
+        await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
 
-      const response = await fetch("/api/import", {
-        method: "POST",
-        body: formData,
+        toast.success(
+          `成功新增商品: ${row["商品名稱"]} 規格: ${row["商品規格"]} 數量: ${row["數量"]}`
+        );
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setUploadSuccess(true);
-        setUploadMessage(result.message || "匯入成功！");
-
-        setTimeout(() => {
-          resetCsvData();
-          if (noteRef.current) {
-            noteRef.current.value = "";
-          }
-        }, 3000);
-      } else {
-        setUploadSuccess(false);
-        setUploadMessage(result.message || "匯入失敗，請重試。");
+      setUploadSuccess(true);
+      setUploadMessage("匯入成功！");
+      resetCsvData();
+      if (noteRef.current) {
+        noteRef.current.value = "";
       }
     } catch (error) {
       console.error("上傳時發生錯誤:", error);

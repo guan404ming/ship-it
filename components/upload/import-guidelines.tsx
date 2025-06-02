@@ -18,7 +18,7 @@ export function ImportGuidelines() {
           <div>
             <h4 className="font-medium">檔案格式要求</h4>
             <p className="text-sm text-muted-foreground">
-              所需欄位包含: 商品編號、規格資訊、數量、批號。
+              所需欄位包含: 商品名稱、規格、數量。
             </p>
           </div>
         </div>

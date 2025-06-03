@@ -111,7 +111,7 @@ export function InventoryTable({
                 <TableCell>{item.model_name ?? "-"}</TableCell>
                 <TableCell
                   className={`text-right font-mono ${
-                    (item.stock_quantity ?? 0) < 10
+                    (item.remaining_days ?? 0) < 7
                       ? "text-[#F27F3D] font-bold"
                       : ""
                   }`}

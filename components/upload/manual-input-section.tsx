@@ -215,7 +215,8 @@ export function ManualInputSection({
                 supplier_id,
                 dayjs().toISOString(),
                 dayjs().toISOString(),
-                [{ model_id, quantity: parseInt(model.quantity, 10) }]
+                [{ model_id, quantity: parseInt(model.quantity, 10) }],
+                "confirmed"
               );
             }
 

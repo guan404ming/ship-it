@@ -463,7 +463,7 @@ export function ProductPerformance({
                     <TableCell>{product.product_id}</TableCell>
                     <TableCell className="flex items-center gap-2">
                       {product.product_name}
-                      {modelsCount > 1 && (
+                      {modelsCount >= 1 && (
                         <Button
                           variant="ghost"
                           size="sm"

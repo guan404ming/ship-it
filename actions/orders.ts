@@ -35,7 +35,7 @@ interface OrderUpdateData {
   cancel_reason?: string;
 }
 
-export async function createOrder(input: OrderInput) {
+export async function upsertOrder(input: OrderInput) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -50,20 +50,30 @@ export async function createOrder(input: OrderInput) {
       input.order_id = `ORD${dateStr}${randomStr}`;
     }
 
-    // Insert order using spread syntax for cleaner code
+    // Upsert order by order_id
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .insert({
-        order_id: input.order_id,
-        ...orderData,
-        created_at: dayjs().toISOString(),
-        payment_time: orderData.payment_time ?? null,
-        shipped_at: orderData.shipped_at ?? null,
-        completed_at: orderData.completed_at ?? null,
-      })
+      .upsert(
+        {
+          order_id: input.order_id,
+          ...orderData,
+          created_at: dayjs().toISOString(),
+          payment_time: orderData.payment_time ?? null,
+          shipped_at: orderData.shipped_at ?? null,
+          completed_at: orderData.completed_at ?? null,
+        },
+        { onConflict: "order_id" }
+      )
       .select()
       .single();
     if (orderError || !order) throw orderError;
+
+    // Delete old order_items for this order_id
+    const { error: deleteItemsError } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", order.order_id);
+    if (deleteItemsError) throw deleteItemsError;
 
     // Insert order items using spread syntax
     const orderItems = items.map((item) => ({

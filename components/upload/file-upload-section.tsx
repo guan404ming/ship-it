@@ -18,10 +18,11 @@ import { parseCSV, type CSVRow } from "@/lib/csv-parser";
 import { upsertStockRecord } from "@/actions/stock_record";
 import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
-import { createOrder } from "@/actions/orders";
+import { upsertOrder } from "@/actions/orders";
 import dayjs from "dayjs";
 import { getSupplierIdByName } from "@/actions/suppliers";
 import { createPurchaseBatch } from "@/actions/purchase";
+import { OrderStatus } from "@/lib/types";
 
 interface FileUploadSectionProps {
   fileImportType: "bulk-order" | "bulk-inventory";
@@ -169,38 +170,38 @@ export function FileUploadSection({
         );
         toast.success("成功更新庫存，共 " + csvData.length + " 筆");
       } else {
-        const items = await Promise.all(
+        await Promise.all(
           csvData.map(async (row) => {
             const { product_id, model_id } = await getProductAndModelIdByName(
               row["商品名稱"],
               row["商品規格"]
             );
-            return {
-              product_id,
-              model_id,
-              quantity: parseInt(row["數量"], 10),
-              returned_quantity: 0,
-              sold_price: parseFloat(row["單價"]),
-              total_price: parseFloat(row["單價"]) * parseInt(row["數量"], 10),
-            };
+
+            await upsertOrder({
+              order_id: row["訂單編號"],
+              buyer_id: 1,
+              product_total_price:
+                parseFloat(row["單價"]) * parseInt(row["數量"], 10),
+              shipping_fee: 0,
+              total_paid: parseFloat(row["單價"]) * parseInt(row["數量"], 10),
+              order_status: row["訂單狀態"] as OrderStatus,
+              payment_time: dayjs().toISOString(),
+              shipped_at: dayjs().toISOString(),
+              completed_at: dayjs().toISOString(),
+              items: [
+                {
+                  product_id,
+                  model_id,
+                  quantity: parseInt(row["數量"], 10),
+                  returned_quantity: 0,
+                  sold_price: parseFloat(row["單價"]),
+                  total_price:
+                    parseFloat(row["單價"]) * parseInt(row["數量"], 10),
+                },
+              ],
+            });
           })
         );
-
-        csvData.forEach(async (row, index) => {
-          await createOrder({
-            buyer_id: 1,
-            product_total_price:
-              parseFloat(row["單價"]) * parseInt(row["數量"], 10),
-            shipping_fee: 0,
-            total_paid: parseFloat(row["單價"]) * parseInt(row["數量"], 10),
-            order_status: "delivered",
-            payment_time: dayjs().toISOString(),
-            shipped_at: dayjs().toISOString(),
-            completed_at: dayjs().toISOString(),
-            items: [items[index]],
-          });
-        });
-
         toast.success("成功建立訂單，共 " + csvData.length + " 筆");
       }
       setUploadSuccess(true);

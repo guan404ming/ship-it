@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
 import { upsertStockRecord } from "@/actions/stock_record";
-import { createOrder } from "@/actions/orders";
+import { upsertOrder } from "@/actions/orders";
 import dayjs from "dayjs";
 import { getSupplierIdByName } from "@/actions/suppliers";
 import { createPurchaseBatch } from "@/actions/purchase";
@@ -42,6 +42,7 @@ export function ManualInputSection({
   const [price, setPrice] = React.useState<string>("");
   const [priceError, setPriceError] = React.useState<string | null>(null);
   const [models, setModels] = React.useState<Model[]>([]);
+  const [orderId, setOrderId] = React.useState<string>("");
 
   const validateModelQuantity = (id: string, value: string) => {
     const updatedModels = models.map((model) => {
@@ -197,8 +198,9 @@ export function ManualInputSection({
           })
         );
 
-        await createOrder({
+        await upsertOrder({
           buyer_id: 1,
+          order_id: orderId,
           product_total_price: items.reduce(
             (sum, item) => sum + item.total_price,
             0
@@ -288,6 +290,17 @@ export function ManualInputSection({
           </div>
 
           <div className="grid gap-3">
+            {manualImportType === "order" && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="order-id">訂單編號</Label>
+                <Input
+                  id="order-id"
+                  placeholder="請輸入訂單編號"
+                  value={orderId}
+                  onChange={(e) => setOrderId(e.target.value)}
+                />
+              </div>
+            )}
             {manualImportType === "inventory" && (
               <div className="grid gap-1.5">
                 <Label htmlFor="supplier-name">廠商名稱</Label>

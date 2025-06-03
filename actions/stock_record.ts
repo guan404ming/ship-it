@@ -18,7 +18,7 @@ export async function upsertStockRecord(
     .eq("model_id", model_id)
     .single();
 
-  if (!stock_record?.stock_quantity) {
+  if (!stock_record) {
     const new_stock_quantity = 0 + quantity_delta * (isIncrease ? 1 : -1);
     const { error: new_stock_record_error } = await supabase
       .from("stock_records")

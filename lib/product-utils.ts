@@ -39,10 +39,24 @@ export function getProductDateRangeData(
       });
   });
 
-  // 將合併後的數據轉為陣列並排序
-  return Array.from(dateMap.values()).sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const allDates: string[] = [];
+  let d = dayjs(startDate);
+  const end = dayjs(endDate);
+  while (d.isSame(end, "day") || d.isBefore(end, "day")) {
+    allDates.push(d.format("YYYY-MM-DD"));
+    d = d.add(1, "day");
+  }
+
+  const result: SalesData[] = allDates.map((date) => {
+    const data = dateMap.get(date);
+    return {
+      date,
+      amount: data ? data.amount : 0,
+      quantity: data ? data.quantity : 0,
+    };
+  });
+
+  return result;
 }
 
 /**

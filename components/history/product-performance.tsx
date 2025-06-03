@@ -621,6 +621,7 @@ export function ProductPerformance({
                         stroke={color}
                         name={product.product_name || "未知商品"}
                         strokeWidth={2}
+                        dot={false}
                       />
                     );
                   })}

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
 import { OrderStatus } from "@/lib/types";
+import dayjs from "dayjs";
 
 // Type for order input (extends the base Order type with custom fields)
 type OrderInput = {
@@ -43,15 +44,8 @@ export async function createOrder(input: OrderInput) {
 
     // Generate a unique order_id (e.g., 'ORD' + YYYYMMDDHHMMSS + random 4 digits)
     if (!input.order_id) {
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      const dateStr =
-        now.getFullYear().toString() +
-        pad(now.getMonth() + 1) +
-        pad(now.getDate()) +
-        pad(now.getHours()) +
-        pad(now.getMinutes()) +
-        pad(now.getSeconds());
+      const now = dayjs();
+      const dateStr = now.format("YYYYMMDDHHmmss");
       const randomStr = Math.floor(1000 + Math.random() * 9000).toString();
       input.order_id = `ORD${dateStr}${randomStr}`;
     }
@@ -62,7 +56,7 @@ export async function createOrder(input: OrderInput) {
       .insert({
         order_id: input.order_id,
         ...orderData,
-        created_at: new Date().toISOString(),
+        created_at: dayjs().toISOString(),
         payment_time: orderData.payment_time ?? null,
         shipped_at: orderData.shipped_at ?? null,
         completed_at: orderData.completed_at ?? null,

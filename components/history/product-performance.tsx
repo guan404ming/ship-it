@@ -380,7 +380,6 @@ export function ProductPerformance({
                   }}
                 />
               </TableHead>
-              <TableHead>ID</TableHead>
               <TableHead>商品名稱</TableHead>
               <TableHead>規格</TableHead>
               <TableHead
@@ -424,7 +423,7 @@ export function ProductPerformance({
           <TableBody>
             {processedAndSortedProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   無符合條件的商品
                 </TableCell>
               </TableRow>
@@ -460,7 +459,6 @@ export function ProductPerformance({
                         }}
                       />
                     </TableCell>
-                    <TableCell>{product.product_id}</TableCell>
                     <TableCell className="flex items-center gap-2">
                       {product.product_name}
                       {modelsCount >= 1 && (

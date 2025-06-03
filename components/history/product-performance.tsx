@@ -174,6 +174,7 @@ export function ProductPerformance({
 
     // 處理數據並計算總和和成長率
     const processedProducts = groupedProductsData
+      .filter((model) => model.models?.length > 0)
       .filter((product) => {
         if (searchQuery) {
           return product.product_name

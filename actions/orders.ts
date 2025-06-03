@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 import { OrderStatus } from "@/lib/types";
 import dayjs from "dayjs";
+import { upsertStockRecord } from "./stock_record";
 
 // Type for order input (extends the base Order type with custom fields)
 type OrderInput = {
@@ -44,8 +45,7 @@ export async function createOrder(input: OrderInput) {
 
     // Generate a unique order_id (e.g., 'ORD' + YYYYMMDDHHMMSS + random 4 digits)
     if (!input.order_id) {
-      const now = dayjs();
-      const dateStr = now.format("YYYYMMDDHHmmss");
+      const dateStr = dayjs().format("YYYYMMDDHHmmss");
       const randomStr = Math.floor(1000 + Math.random() * 9000).toString();
       input.order_id = `ORD${dateStr}${randomStr}`;
     }
@@ -76,6 +76,14 @@ export async function createOrder(input: OrderInput) {
       .insert(orderItems);
     if (orderItemsError) throw orderItemsError;
 
+    if (orderData.order_status === "delivered") {
+      await Promise.all(
+        items.map(async (item) => {
+          await upsertStockRecord(item.model_id, false, item.quantity);
+        })
+      );
+    }
+
     return order;
   } catch (error) {
     console.error("Error creating order:", error);
@@ -96,9 +104,9 @@ export async function updateOrderStatus(
   };
 
   if (status === "shipped") {
-    updateData.shipped_at = new Date().toISOString();
+    updateData.shipped_at = dayjs().toISOString();
   } else if (status === "delivered") {
-    updateData.completed_at = new Date().toISOString();
+    updateData.completed_at = dayjs().toISOString();
   }
 
   if (status === "canceled" && cancelReason) {

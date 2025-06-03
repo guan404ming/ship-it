@@ -10,9 +10,9 @@ import { ImportGuidelines } from "@/components/upload/import-guidelines";
 
 export default function InventoryClient() {
   const searchParams = useSearchParams();
-  const [fileImportType, setFileImportType] = useState<"inventory" | "order">(
-    "order"
-  );
+  const [fileImportType, setFileImportType] = useState<
+    "bulk-inventory" | "bulk-order"
+  >("bulk-order");
   const [manualImportType, setManualImportType] = useState<
     "inventory" | "order"
   >("order");
@@ -20,13 +20,13 @@ export default function InventoryClient() {
   useEffect(() => {
     const type = searchParams.get("type");
     if (type === "inventory") {
-      setFileImportType("inventory");
+      setFileImportType("bulk-inventory");
       setManualImportType("inventory");
     }
   }, [searchParams]);
 
   const handleFileImportTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setFileImportType(event.target.value as "inventory" | "order");
+    setFileImportType(event.target.value as "bulk-inventory" | "bulk-order");
   };
 
   const handleManualImportTypeChange = (

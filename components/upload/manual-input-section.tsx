@@ -9,6 +9,7 @@ import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
 import { upsertStockRecord } from "@/actions/stock_record";
 import { createOrder } from "@/actions/orders";
+import dayjs from "dayjs";
 
 interface Model {
   id: string;
@@ -192,7 +193,7 @@ export function ManualInputSection({
             };
           })
         );
-        // buyer_id 先用 1 (可根據實際需求調整)
+
         await createOrder({
           buyer_id: 1,
           product_total_price: items.reduce(
@@ -201,7 +202,10 @@ export function ManualInputSection({
           ),
           shipping_fee: 0,
           total_paid: items.reduce((sum, item) => sum + item.total_price, 0),
-          order_status: "pending",
+          order_status: "delivered",
+          payment_time: dayjs().toISOString(),
+          shipped_at: dayjs().toISOString(),
+          completed_at: dayjs().toISOString(),
           items,
         });
         toast.success("成功建立訂單");

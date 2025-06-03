@@ -20,9 +20,10 @@ import { upsertStockRecord } from "@/actions/stock_record";
 import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
 import { createOrder } from "@/actions/orders";
+import dayjs from "dayjs";
 
 interface FileUploadSectionProps {
-  fileImportType: string | null;
+  fileImportType: "bulk-order" | "bulk-inventory";
   onFileImportTypeChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -143,7 +144,7 @@ export function FileUploadSection({
     setUploadMessage(null);
 
     try {
-      if (fileImportType === "inventory") {
+      if (fileImportType === "bulk-inventory") {
         await Promise.all(
           csvData.map(async (row) => {
             const { model_id } = await getProductAndModelIdByName(
@@ -180,7 +181,10 @@ export function FileUploadSection({
               parseFloat(row["單價"]) * parseInt(row["數量"], 10),
             shipping_fee: 0,
             total_paid: parseFloat(row["單價"]) * parseInt(row["數量"], 10),
-            order_status: "pending",
+            order_status: "delivered",
+            payment_time: dayjs().toISOString(),
+            shipped_at: dayjs().toISOString(),
+            completed_at: dayjs().toISOString(),
             items: [items[index]],
           });
         });
@@ -212,28 +216,28 @@ export function FileUploadSection({
               <div className="flex items-center">
                 <Input
                   type="radio"
-                  id="order"
+                  id="bulk-order"
                   name="import-type-left"
-                  value="order"
+                  value="bulk-order"
                   className="h-4 w-4"
                   onChange={onFileImportTypeChange}
-                  checked={fileImportType === "order"}
+                  checked={fileImportType === "bulk-order"}
                 />
-                <Label htmlFor="order" className="ml-2">
+                <Label htmlFor="bulk-order" className="ml-2">
                   銷售匯入
                 </Label>
               </div>
               <div className="flex items-center">
                 <Input
                   type="radio"
-                  id="inventory"
+                  id="bulk-inventory"
                   name="import-type-left"
-                  value="inventory"
+                  value="bulk-inventory"
                   className="h-4 w-4"
                   onChange={onFileImportTypeChange}
-                  checked={fileImportType === "inventory"}
+                  checked={fileImportType === "bulk-inventory"}
                 />
-                <Label htmlFor="inventory" className="ml-2">
+                <Label htmlFor="bulk-inventory" className="ml-2">
                   庫存匯入
                 </Label>
               </div>

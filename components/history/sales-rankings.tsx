@@ -258,7 +258,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>商品名稱</TableHead>
                   <TableHead>型號</TableHead>
                   <TableHead>規格數</TableHead>
@@ -271,7 +270,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
               <TableBody>
                 {topSalesList.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell>{product.product_id}</TableCell>
                     <TableCell>{product.product_name}</TableCell>
                     <TableCell>{product.model_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
@@ -300,7 +298,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>商品名稱</TableHead>
                   <TableHead>型號</TableHead>
                   <TableHead>規格數</TableHead>
@@ -313,7 +310,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
               <TableBody>
                 {bottomSalesList.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell>{product.product_id}</TableCell>
                     <TableCell>{product.product_name}</TableCell>
                     <TableCell>{product.model_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
@@ -340,7 +336,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>商品名稱</TableHead>
                   <TableHead>型號</TableHead>
                   <TableHead>規格數</TableHead>
@@ -353,7 +348,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
               <TableBody>
                 {topGrowthList.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell>{product.product_id}</TableCell>
                     <TableCell>{product.product_name}</TableCell>
                     <TableCell>{product.model_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>
@@ -380,7 +374,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>商品名稱</TableHead>
                   <TableHead>型號</TableHead>
                   <TableHead>規格數</TableHead>
@@ -393,7 +386,6 @@ export function SalesRankings({ productSalesData }: SalesRankingProps) {
               <TableBody>
                 {bottomGrowthList.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell>{product.product_id}</TableCell>
                     <TableCell>{product.product_name}</TableCell>
                     <TableCell>{product.model_name}</TableCell>
                     <TableCell>{product.specifications}</TableCell>

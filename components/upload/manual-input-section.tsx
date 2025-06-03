@@ -39,8 +39,6 @@ export function ManualInputSection({
   const [modelNameError, setModelNameError] = React.useState<string | null>(
     null
   );
-  const [price, setPrice] = React.useState<string>("");
-  const [priceError, setPriceError] = React.useState<string | null>(null);
   const [models, setModels] = React.useState<Model[]>([]);
   const [orderId, setOrderId] = React.useState<string>("");
 
@@ -83,21 +81,6 @@ export function ManualInputSection({
     setModels(updatedModels);
   };
 
-  const validatePrice = (value: string) => {
-    setPrice(value);
-
-    if (!value) {
-      setPriceError(null);
-      return;
-    }
-
-    const numberValue = parseFloat(value);
-    if (isNaN(numberValue) || numberValue <= 0) {
-      setPriceError("請輸入大於0的數字");
-    } else {
-      setPriceError(null);
-    }
-  };
 
   const addModel = () => {
     if (!modelName.trim()) return;
@@ -295,7 +278,7 @@ export function ManualInputSection({
                 <Label htmlFor="order-id">訂單編號</Label>
                 <Input
                   id="order-id"
-                  placeholder="請輸入訂單編號"
+                  placeholder="請輸入訂單編號 (選填，若有訂單編號可填寫，否則系統會自動生成)"
                   value={orderId}
                   onChange={(e) => setOrderId(e.target.value)}
                 />
@@ -472,22 +455,6 @@ export function ManualInputSection({
                 </p>
               )}
             </div>
-
-            {manualImportType !== "inventory" && (
-              <div className="grid gap-1.5">
-                <Label htmlFor="price">價格</Label>
-                <Input
-                  id="price"
-                  placeholder="請輸入價格"
-                  className={priceError ? "border-red-500" : ""}
-                  value={price}
-                  onChange={(e) => validatePrice(e.target.value)}
-                />
-                {priceError && (
-                  <p className="text-sm text-red-500">{priceError}</p>
-                )}
-              </div>
-            )}
           </div>
 
           <Button className="w-full" type="submit" onClick={handleSubmit}>

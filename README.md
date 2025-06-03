@@ -51,4 +51,7 @@ bun run supabase db push
 
 # Generate types
 bun run supabase gen types typescript --project-id <project-id> --schema public > database.types.ts
+
+# Revert migration
+bun run supabase migration repair --status reverted <migration-id>
 ```

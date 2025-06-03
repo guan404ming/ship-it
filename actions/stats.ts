@@ -1,244 +1,139 @@
-// Buffett May. 26
-import { createClient } from '@supabase/supabase-js'
-import { Database } from '@/database.types'
+import { createClient } from "@/lib/supabase/server";
+import { GroupedProductSales, RankingProduct, SalesData } from "@/lib/types";
+import { cookies } from "next/headers";
 
-const db = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-type DailyStats = {
-    date: string
-    amount: number
-    quantity: number
-}
-
-type OrderWithItems = {
-    created_at: string | null
-    total_paid: number | null
-    order_items: {
-        quantity: number | null
-  }[]
-}
-
-type Output = {
-    success: boolean
-    data?: {
-        timeSeries: DailyStats[]
-    }
-    error?: string
-}
-
-type ProductStatsPoint = {
-  date: string
-  amount: number
-  quantity: number
-}
-
-type ProductStats = {
-  product_id: number
-  data: ProductStatsPoint[]
-}
-
-// 賣場整體表現
-// 根據選取的時間範圍，回傳所有商品加總 orders.total_paid （銷售額）、加總 order_items.quantity （銷售量）的時間序列
-// Input: 起始日期, 結束日期
-// Output: 每日銷售額, 每日銷售數量
-// {
-//   "success": true,
-//   "data": [
-//     {
-//       "date": "2024-01-02",
-//       "amount": 3800,
-//       "quantity": 21
-//     },
-//     ...
-//   ]
-// }
-// SQL:
-// SELECT 
-//   orders.created_at,
-//   orders.total_paid,
-//   order_items.quantity
-// FROM orders
-// LEFT JOIN order_items ON orders.order_id = order_items.order_id 
-// WHERE orders.created_at >= '2025-01-01'
-// AND orders.created_at <= '2025-06-01';
-export async function getProductSalesStats(
-  startDate: string, 
-  endDate: string
-): Promise<Output> {
-  console.log("getProductSalesStats", startDate, endDate)
-  try {
-    const { data: stats, error } = await db
-      .from('orders')
-      .select(`
-        created_at,
-        total_paid,
-        order_items (
-          quantity
-        )
-      `)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
-
-    if (error) throw error
-
-    const dailyStatsMap = (stats || []).reduce((acc: Record<string, DailyStats>, order: OrderWithItems) => {
-      if (!order.created_at) return acc
-      
-      const date = new Date(order.created_at).toISOString().split('T')[0]
-      if (!acc[date]) {
-        acc[date] = {
-          date,
-          amount: 0,
-          quantity: 0
-        }
-      }
-      acc[date].amount += Number(order.total_paid) || 0
-      acc[date].quantity += (order.order_items || []).reduce((sum: number, item) => sum + (Number(item.quantity) || 0), 0)
-      return acc
-    }, {})
-
-    // Create date list between startDate and endDate
-    const dateList: string[] = []
-    const current = new Date(startDate)
-    const end = new Date(endDate)
-
-    while (current <= end) {
-      const dateStr = current.toISOString().split('T')[0]
-      dateList.push(dateStr)
-      current.setDate(current.getDate() + 1)
-    }
-
-    // Missing Data Date --> {date: "2025-01-01", amount: 0, quantity: 0}
-    const completeStats: DailyStats[] = dateList.map(date => {
-      return dailyStatsMap[date] ?? {
-        date,
-        amount: 0,
-        quantity: 0
-      }
-    })
-
-    return {
-      success: true,
-      data: {
-        timeSeries: completeStats.sort((a, b) => a.date.localeCompare(b.date)),
-      }
-    }
-
-  } catch (error) {
-    console.error('Error getting product sales stats:', error)
-    return {
-      success: false,
-      error: (error as Error).message
-    }
-  }
-}
-
-
-// 當使用者選取商品後，根據選取的時間範圍，回傳所選商品加總 order_items.amount（銷售額）、加總 order_items.quantity （銷售量）的時間序列
-// Input: Product_ID(s), 起始日期, 結束日期
-// Output: Product_IDs: {每日銷售額, 每日銷售數量}
-// {
-//   "success": true,
-//   "data": [
-//     {
-//       "product_id": 1,
-//       "data": [
-//         {
-//            "date": "2024-01-02",
-//            "amount": 3800,
-//            "quantity": 21
-//         },
-//         ...
-//       ]
-//     },
-//   ]
-// }
-export async function getProductStatsByIds(
-  productIds: number[],
+export async function getHistoryData(
   startDate: string,
   endDate: string
-): Promise<{ success: boolean; data?: ProductStats[]; error?: string }> {
+): Promise<{
+  salesData: SalesData[];
+  productSalesData: GroupedProductSales[];
+  productRankingData: RankingProduct[];
+}> {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  // 定義 sales_by_date view 的型別
+  type SalesByDateRow = {
+    date: string;
+    model_id: number;
+    product_id: number;
+    amount: number;
+    quantity: number;
+  };
+
   try {
-    // Input validation
-    if (!productIds?.length) {
-      throw new Error('Product IDs are required')
-    }
+    // 1. 直接 select sales_by_date view
+    const { data: salesByDate, error: salesByDateError } = await supabase
+      .from("sales_by_date")
+      .select("*")
+      .gte("date", startDate)
+      .lte("date", endDate);
+    if (salesByDateError) throw salesByDateError;
 
-    const { data: orders, error } = await db
-      .from('orders')
-      .select(`
-        created_at,
-        order_items (
-          product_id,
-          quantity,
-          total_price
-        )
-      `)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
+    // 2. 撈 products, models
+    const [products, models] = await Promise.all([
+      supabase
+        .from("products")
+        .select("product_id, product_name, listed_date, status"),
+      supabase
+        .from("product_models")
+        .select(
+          "model_id, product_id, model_name, original_price, promo_price, created_at"
+        ),
+    ]);
+    if (products.error || models.error) throw products.error || models.error;
 
-    if (error) throw error
+    // 3. 組合 salesData
+    // 只要日期、總金額、總數量
+    const salesDataMap = new Map<
+      string,
+      { amount: number; quantity: number }
+    >();
+    (salesByDate as SalesByDateRow[])?.forEach((row) => {
+      const date = row.date.split("T")[0];
+      const prev = salesDataMap.get(date) || { amount: 0, quantity: 0 };
+      salesDataMap.set(date, {
+        amount: prev.amount + Number(row.amount || 0),
+        quantity: prev.quantity + Number(row.quantity || 0),
+      });
+    });
+    const salesData: SalesData[] = Array.from(salesDataMap.entries()).map(
+      ([date, v]) => ({
+        date,
+        amount: v.amount,
+        quantity: v.quantity,
+      })
+    );
 
-    // 建立日期清單
-    const dateList: string[] = []
-    const current = new Date(startDate)
-    const end = new Date(endDate)
-    while (current <= end) {
-      dateList.push(current.toISOString().split('T')[0])
-      current.setDate(current.getDate() + 1)
-    }
+    // 4. 組合 productSalesData
+    const productSalesData: GroupedProductSales[] =
+      products.data?.map((p) => {
+        const productModels =
+          models.data?.filter((m) => m.product_id === p.product_id) || [];
+        return {
+          product_id: p.product_id,
+          product_name: p.product_name,
+          listed_date: p.listed_date,
+          status: p.status,
+          models: productModels.map((m) => {
+            const modelData =
+              (salesByDate as SalesByDateRow[])?.filter(
+                (d) => d.model_id === m.model_id
+              ) || [];
+            return {
+              ...m,
+              data: modelData.map((d) => ({
+                date: d.date.split("T")[0],
+                amount: Number(d.amount) || 0,
+                quantity: Number(d.quantity) || 0,
+              })),
+            };
+          }),
+        };
+      }) || [];
 
-    // 初始化 product map: product_id -> { date -> { amount, quantity } }
-    const productMap: Record<number, Record<string, ProductStatsPoint>> = {}
-
-    // Initialize data structure for each product ID and date
-    productIds.forEach(productId => {
-      productMap[productId] = {}
-      dateList.forEach(date => {
-        productMap[productId][date] = {
-          date,
+    // 5. 組合 productRankingData
+    const modelSalesMap = new Map<
+      number,
+      { amount: number; quantity: number }
+    >();
+    (salesByDate as SalesByDateRow[])?.forEach((row) => {
+      const prev = modelSalesMap.get(row.model_id) || {
+        amount: 0,
+        quantity: 0,
+      };
+      modelSalesMap.set(row.model_id, {
+        amount: prev.amount + Number(row.amount || 0),
+        quantity: prev.quantity + Number(row.quantity || 0),
+      });
+    });
+    const productRankingData: RankingProduct[] =
+      models.data?.map((m) => {
+        const p = products.data?.find((p) => p.product_id === m.product_id);
+        const sales = modelSalesMap.get(m.model_id) || {
           amount: 0,
-          quantity: 0
-        }
-      })
-    })
+          quantity: 0,
+        };
+        return {
+          product_id: p?.product_id || 0,
+          product_name: p?.product_name || "",
+          listed_date: p?.listed_date || "",
+          status: p?.status || "",
+          model_id: m.model_id,
+          model_name: m.model_name,
+          original_price: m.original_price,
+          promo_price: m.promo_price,
+          created_at: m.created_at,
+          sales: sales.amount,
+          quantity: sales.quantity,
+          growth: undefined, // 若要計算成長率，需再查詢前一期間資料
+        };
+      }) || [];
 
-    // Process orders and aggregate data
-    if (orders) {
-      orders.forEach(order => {
-        if (!order.created_at || !order.order_items) return
-        
-        const date = new Date(order.created_at).toISOString().split('T')[0]
-        
-        order.order_items.forEach(item => {
-          if (!item.product_id || !productIds.includes(item.product_id)) return
-          
-          const productStats = productMap[item.product_id][date]
-          if (productStats) {
-            productStats.amount += Number(item.total_price) || 0
-            productStats.quantity += Number(item.quantity) || 0
-          }
-        })
-      })
-    }
-
-    // Convert to final format and sort data
-    const result: ProductStats[] = productIds.map(productId => ({
-      product_id: productId,
-      data: Object.values(productMap[productId]).sort((a, b) => 
-        a.date.localeCompare(b.date)
-      )
-    }))
-
-    return { success: true, data: result }
+    return { salesData, productSalesData, productRankingData };
   } catch (error) {
-    console.error('Error in getProductStatsByIds:', error)
-    return {
-      success: false,
-      error: (error as Error).message,
-    }
+    console.error("Error in getHistoryData:", error);
+    return { salesData: [], productSalesData: [], productRankingData: [] };
   }
 }

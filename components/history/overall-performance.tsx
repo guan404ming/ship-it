@@ -1,20 +1,38 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts"
+import { useEffect, useState, useMemo } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChartContainer, ChartConfig, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Input } from "@/components/ui/input"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { getDateRange as getDateRangeUtil } from "@/lib/date-utils"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChartContainer,
+  ChartConfig,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { getDateRange as getDateRangeUtil } from "@/lib/date-utils";
 
-import { SalesData } from "@/lib/types"
+import { SalesData } from "@/lib/types";
+import dayjs from "dayjs";
 
 interface OverallPerformanceProps {
-  salesData: SalesData[]
+  salesData: SalesData[];
 }
 
 const chartConfig = {
@@ -25,34 +43,47 @@ const chartConfig = {
   quantity: {
     label: "銷售量",
     color: "hsl(173, 58%, 39%)",
-  }
-} satisfies ChartConfig
+  },
+} satisfies ChartConfig;
 
 export function OverallPerformance({ salesData }: OverallPerformanceProps) {
-  const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
-  const [chartType, setChartType] = React.useState("amount")
-  const [customDateRange, setCustomDateRange] = React.useState<{ start: string, end: string } | null>(null)
+  const isMobile = useIsMobile();
+  const [timeRange, setTimeRange] = useState("90d");
+  const [chartType, setChartType] = useState("amount");
+  const [customDateRange, setCustomDateRange] = useState<{
+    start: string;
+    end: string;
+  } | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isMobile) {
-      setTimeRange("30d")
+      setTimeRange("30d");
     }
-  }, [isMobile])
+  }, [isMobile]);
 
-  const currentMonthData = salesData[salesData.length - 1]
-  const previousMonthData = salesData[salesData.length - 5]
-  const changePercentage = Math.round((currentMonthData.amount - previousMonthData.amount) / previousMonthData.amount * 100 * 10) / 10
+  const currentMonthData = salesData[salesData.length - 1];
+  const previousMonthData = salesData[salesData.length - 5];
+  const changePercentage =
+    Math.round(
+      ((currentMonthData.amount - previousMonthData.amount) /
+        previousMonthData.amount) *
+        100 *
+        10
+    ) / 10;
 
-  const filteredData = React.useMemo(() => {
-    const now = new Date("2025-05-01");
-    const { startDate, endDate } = getDateRangeUtil(timeRange, customDateRange, now);
-    
-    return salesData.filter(item => {
+  const filteredData = useMemo(() => {
+    const now = dayjs().toDate();
+    const { startDate, endDate } = getDateRangeUtil(
+      timeRange,
+      customDateRange,
+      now
+    );
+
+    return salesData.filter((item) => {
       const date = new Date(item.date);
       return date >= startDate && date <= endDate;
     });
-  }, [timeRange, customDateRange, salesData])
+  }, [timeRange, customDateRange, salesData]);
 
   return (
     <>
@@ -61,8 +92,12 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
           <CardContent className="p-6">
             <div className="text-sm text-muted-foreground">月銷售額</div>
             <div className="flex items-baseline justify-between">
-              <h2 className="text-3xl font-bold text-[#08678C]">$ {currentMonthData.amount.toLocaleString()}</h2>
-              <span className="text-sm text-green-600">↑ {changePercentage}%</span>
+              <h2 className="text-3xl font-bold text-[#08678C]">
+                $ {currentMonthData.amount.toLocaleString()}
+              </h2>
+              <span className="text-sm text-green-600">
+                ↑ {changePercentage}%
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -71,8 +106,12 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
           <CardContent className="p-6">
             <div className="text-sm text-muted-foreground">月銷量</div>
             <div className="flex items-baseline justify-between">
-              <h2 className="text-3xl font-bold text-[#08678C]">{currentMonthData.quantity.toLocaleString()} 件</h2>
-              <span className="text-sm text-green-600">↑ {changePercentage}%</span>
+              <h2 className="text-3xl font-bold text-[#08678C]">
+                {currentMonthData.quantity.toLocaleString()} 件
+              </h2>
+              <span className="text-sm text-green-600">
+                ↑ {changePercentage}%
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -84,9 +123,7 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
             <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <div>
                 <CardTitle>整體銷售表現</CardTitle>
-                <CardDescription>
-                  折線圖
-                </CardDescription>
+                <CardDescription>折線圖</CardDescription>
               </div>
               <div className="flex items-center">
                 <ToggleGroup
@@ -99,21 +136,23 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
                   <ToggleGroupItem value="amount">銷售額</ToggleGroupItem>
                   <ToggleGroupItem value="quantity">銷售量</ToggleGroupItem>
                 </ToggleGroup>
-                <Select value={timeRange} onValueChange={(value) => {
-                  setTimeRange(value);
-                  if (value !== "custom") {
-                    setCustomDateRange(null);
-                  } else if (value === "custom" && !customDateRange) {
-                    const now = new Date("2025-05-01");
-                    const startDate = new Date(now);
-                    startDate.setDate(startDate.getDate() - 30);
-                    setCustomDateRange({
-                      start: startDate.toISOString().split('T')[0],
-                      end: now.toISOString().split('T')[0]
-                    });
-                  }
-                }}>
-                  <SelectTrigger 
+                <Select
+                  value={timeRange}
+                  onValueChange={(value) => {
+                    setTimeRange(value);
+                    if (value !== "custom") {
+                      setCustomDateRange(null);
+                    } else if (value === "custom" && !customDateRange) {
+                      const now = dayjs().toDate();
+                      const startDate = dayjs().subtract(30, "day").toDate();
+                      setCustomDateRange({
+                        start: startDate.toISOString().split("T")[0],
+                        end: now.toISOString().split("T")[0],
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger
                     className="ml-2 w-[150px]"
                     size="sm"
                     aria-label="選擇時間範圍"
@@ -136,27 +175,32 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
                 <Input
                   type="date"
                   value={customDateRange?.start || ""}
-                  onChange={(e) => setCustomDateRange({
-                    start: e.target.value,
-                    end: customDateRange?.end || new Date("2025-05-01").toISOString().split('T')[0]
-                  })}
+                  onChange={(e) =>
+                    setCustomDateRange({
+                      start: e.target.value,
+                      end:
+                        customDateRange?.end ||
+                        dayjs().toISOString().split("T")[0],
+                    })
+                  }
                   className="w-[130px]"
                 />
                 <span className="self-center">到</span>
                 <Input
                   type="date"
                   value={customDateRange?.end || ""}
-                  onChange={(e) => setCustomDateRange({
-                    start: customDateRange?.start || "",
-                    end: e.target.value
-                  })}
+                  onChange={(e) =>
+                    setCustomDateRange({
+                      start: customDateRange?.start || "",
+                      end: e.target.value,
+                    })
+                  }
                   className="w-[130px]"
                 />
               </div>
             )}
           </CardHeader>
           <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-
             <ChartContainer
               config={chartConfig}
               className="aspect-auto h-[300px] w-full"
@@ -164,80 +208,96 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
               <AreaChart data={filteredData}>
                 <defs>
                   <linearGradient id="fillAmount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(12, 76%, 61%)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="hsl(12, 76%, 61%)" stopOpacity={0.1} />
+                    <stop
+                      offset="5%"
+                      stopColor="hsl(12, 76%, 61%)"
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="hsl(12, 76%, 61%)"
+                      stopOpacity={0.1}
+                    />
                   </linearGradient>
                   <linearGradient id="fillQuantity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(173, 58%, 39%)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="hsl(173, 58%, 39%)" stopOpacity={0.1} />
+                    <stop
+                      offset="5%"
+                      stopColor="hsl(173, 58%, 39%)"
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="hsl(173, 58%, 39%)"
+                      stopOpacity={0.1}
+                    />
                   </linearGradient>
                 </defs>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    minTickGap={32}
-                    tickFormatter={(value) => {
-                      const date = new Date(value)
-                      return date.toLocaleDateString("zh-TW", {
-                        month: "numeric",
-                        day: "numeric",
-                      })
-                    }}
-                  />
-                  <YAxis
-                    label={{ 
-                      value: chartType === "amount" ? "銷售額" : "銷售量", 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      style: { textAnchor: 'middle' }
-                    }}
-                    tickFormatter={(value) => {
-                      if (chartType === "amount") {
-                        if (value >= 10000) {
-                          return `$${(value / 1000).toFixed(0)}k`
-                        }
-                        return `$${value}`
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return date.toLocaleDateString("zh-TW", {
+                      month: "numeric",
+                      day: "numeric",
+                    });
+                  }}
+                />
+                <YAxis
+                  label={{
+                    value: chartType === "amount" ? "銷售額" : "銷售量",
+                    angle: -90,
+                    position: "insideLeft",
+                    style: { textAnchor: "middle" },
+                  }}
+                  tickFormatter={(value) => {
+                    if (chartType === "amount") {
+                      if (value >= 10000) {
+                        return `$${(value / 1000).toFixed(0)}k`;
                       }
-                      return value.toString()
-                    }}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        labelFormatter={(value) => {
-                          return new Date(value).toLocaleDateString("zh-TW", {
-                            month: "long",
-                            day: "numeric",
-                          })
-                        }}
-                        indicator="dot"
-                      />
+                      return `$${value}`;
                     }
+                    return value.toString();
+                  }}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(value) => {
+                        return new Date(value).toLocaleDateString("zh-TW", {
+                          month: "long",
+                          day: "numeric",
+                        });
+                      }}
+                      indicator="dot"
+                    />
+                  }
+                />
+                {(chartType === "amount" || chartType === "both") && (
+                  <Area
+                    dataKey="amount"
+                    type="monotone"
+                    fill="url(#fillAmount)"
+                    stroke="hsl(12, 76%, 61%)"
+                    strokeWidth={2}
                   />
-                  {(chartType === "amount" || chartType === "both") && (
-                    <Area
-                      dataKey="amount"
-                      type="monotone"
-                      fill="url(#fillAmount)"
-                      stroke="hsl(12, 76%, 61%)"
-                      strokeWidth={2}
-                    />
-                  )}
-                  {(chartType === "quantity" || chartType === "both") && (
-                    <Area
-                      dataKey="quantity"
-                      type="monotone"
-                      fill="url(#fillQuantity)"
-                      stroke="hsl(173, 58%, 39%)"
-                      strokeWidth={2}
-                    />
-                  )}
-                </AreaChart>
-              </ChartContainer>
+                )}
+                {(chartType === "quantity" || chartType === "both") && (
+                  <Area
+                    dataKey="quantity"
+                    type="monotone"
+                    fill="url(#fillQuantity)"
+                    stroke="hsl(173, 58%, 39%)"
+                    strokeWidth={2}
+                  />
+                )}
+              </AreaChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
@@ -249,12 +309,12 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
           </CardHeader>
           <CardContent>
             <p>
-              x 軸：表示時間（月、日），可選擇不同的時間區間<br />
-              y 軸：顯示銷售額（$）或銷售量（件）
+              x 軸：表示時間（月、日），可選擇不同的時間區間
+              <br />y 軸：顯示銷售額（$）或銷售量（件）
             </p>
           </CardContent>
         </Card>
       </div>
     </>
-  )
+  );
 }

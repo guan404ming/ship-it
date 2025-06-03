@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/number-input";
@@ -14,76 +14,45 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { purchaseOrderData } from "@/lib/data/purchase-data";
+import { PurchaseDashboardRow, PurchaseFormData } from "@/lib/types";
+import dayjs from "dayjs";
+import { updatePurchaseItem } from "@/actions/purchase";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-interface PurchaseEditDialogProps {
-  purchaseId: string;
-}
+export function PurchaseEditDialog({
+  purchase,
+}: {
+  purchase: PurchaseDashboardRow;
+}) {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState<PurchaseFormData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-// Local interface for model items in the edit dialog
-interface LocalModelItem {
-  id: number;
-  name: string;
-  quantity: number;
-}
-
-// Interface for our form data
-interface PurchaseFormData {
-  item_id: number;
-  supplier_name: string;
-  product_name: string;
-  model_name: string;
-  quantity: number;
-  unit_cost: number;
-  created_at: string;
-  expect_date: string;
-  note?: string;
-  models: LocalModelItem[];
-  // Keep these fields in the data structure but don't display them
-  batch_id?: number;
-}
-
-export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
-  const [open, setOpen] = React.useState(false);
-  const [formData, setFormData] = React.useState<PurchaseFormData | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  // Fetch purchase data when dialog opens
-  React.useEffect(() => {
-    if (open && purchaseId) {
-      // In a real application, this would be an API call
-      // For now, we'll use mock data
-      const purchaseItem = purchaseOrderData.find(item => item.item_id.toString() === purchaseId);
-      
-      if (purchaseItem) {
-        setFormData({
-          item_id: purchaseItem.item_id,
-          supplier_name: purchaseItem.supplier_name || "",
-          product_name: purchaseItem.product_name || "",
-          model_name: purchaseItem.model_name || "",
-          quantity: purchaseItem.quantity || 0,
-          unit_cost: typeof purchaseItem.unit_cost === 'number' ? purchaseItem.unit_cost : 0,
-          created_at: purchaseItem.created_at || "",
-          expect_date: purchaseItem.expect_date || "",
-          note: purchaseItem.note || "",
-          batch_id: purchaseItem.batch_id,
-          models: [
-            {
-              id: 1,
-              name: purchaseItem.model_name || "",
-              quantity: purchaseItem.quantity || 0
-            }
-          ]
-        });
-      }
+  useEffect(() => {
+    if (open && purchase) {
+      setFormData({
+        ...purchase,
+        models: [
+          {
+            id: purchase.model_id,
+            name: purchase.model_name || "",
+            quantity: purchase.quantity || 0,
+          },
+        ],
+      });
     }
-  }, [open, purchaseId]);
+  }, [open, purchase]);
 
-  const handleChange = (field: keyof PurchaseFormData, value: string | number) => {
+  const handleChange = (
+    field: keyof PurchaseFormData,
+    value: string | number
+  ) => {
     if (formData) {
       setFormData({
         ...formData,
-        [field]: value
+        [field]: value,
       });
     }
   };
@@ -93,7 +62,7 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
       setFormData({
         ...formData,
         models: [{ ...formData.models[0], name }],
-        model_name: name
+        model_name: name,
       });
     }
   };
@@ -103,26 +72,22 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
       setFormData({
         ...formData,
         models: [{ ...formData.models[0], quantity }],
-        quantity: quantity
+        quantity: quantity,
       });
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Here you would update the purchase item in the database
-      // For now we'll just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real application, you would call an update function
-      // Example: await updatePurchaseItem(formData);
-      
-      console.log("Updated purchase item:", formData);
-      
-      // Close the dialog after successful update
+      if (formData) {
+        await updatePurchaseItem(formData);
+      }
+
+      router.refresh();
+      toast.success("叫貨項目已更新");
       setOpen(false);
     } catch (error) {
       console.error("Error updating purchase item:", error);
@@ -134,9 +99,9 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="underline bg-transparent p-0 h-auto text-gray-500 hover:bg-transparent hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           編輯
@@ -145,94 +110,98 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>編輯叫貨項目</DialogTitle>
-          <DialogDescription>
-            修改叫貨資料，完成後將自動更新
-          </DialogDescription>
+          <DialogDescription>修改叫貨資料，完成後將自動更新</DialogDescription>
         </DialogHeader>
-        
+
         {formData ? (
           <form onSubmit={handleSubmit} className="space-y-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">廠商名稱</label>
-                <Input 
-                  value={formData.supplier_name} 
-                  onChange={(e) => handleChange('supplier_name', e.target.value)}
+                <Input
+                  value={formData.supplier_name}
+                  onChange={(e) =>
+                    handleChange("supplier_name", e.target.value)
+                  }
                   placeholder="輸入廠商名稱"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">商品名稱</label>
-                <Input 
-                  value={formData.product_name} 
-                  onChange={(e) => handleChange('product_name', e.target.value)}
+                <Input
+                  value={formData.product_name}
+                  onChange={(e) => handleChange("product_name", e.target.value)}
                   placeholder="輸入商品名稱"
                 />
               </div>
             </div>
-            
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">商品規格</label>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-500">規格名稱</label>
-                      <Input 
-                        placeholder="輸入規格名稱" 
-                        value={formData.models[0].name}
-                        onChange={(e) => handleModelNameChange(e.target.value)}
-                        className="h-10 w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">數量</label>
-                      <NumberInput
-                        value={formData.models[0].quantity}
-                        onChange={(value) => handleModelQuantityChange(value)}
-                        min={1}
-                        step={1}
-                        className="w-full"
-                      />
-                    </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  商品規格
+                </label>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500">規格名稱</label>
+                    <Input
+                      placeholder="輸入規格名稱"
+                      value={formData.models[0].name}
+                      onChange={(e) => handleModelNameChange(e.target.value)}
+                      className="h-10 w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">數量</label>
+                    <NumberInput
+                      value={formData.models[0].quantity}
+                      onChange={(value) => handleModelQuantityChange(value)}
+                      min={1}
+                      step={1}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               </div>
+            </div>
 
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="text-sm font-medium">單價</label>
-                <Input 
+                <Input
                   type="number"
-                  value={formData.unit_cost.toString()}
-                  onChange={(e) => handleChange('unit_cost', parseFloat(e.target.value) || 0)}
+                  value={
+                    formData.unit_cost ? formData.unit_cost.toString() : "0"
+                  }
+                  onChange={(e) =>
+                    handleChange("unit_cost", parseFloat(e.target.value) || 0)
+                  }
                   placeholder="輸入單價"
                 />
-              </div>
-              
+              </div> */}
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">預計到貨日</label>
-                <Input 
+                <Input
                   type="date"
-                  value={formData.expect_date}
-                  onChange={(e) => handleChange('expect_date', e.target.value)}
+                  value={dayjs(formData.expect_date).format("YYYY-MM-DD")}
+                  onChange={(e) => handleChange("expect_date", e.target.value)}
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">備註</label>
-              <Textarea 
-                value={formData.note || ''}
-                onChange={(e) => handleChange('note', e.target.value)}
+              <Textarea
+                value={formData.note || ""}
+                onChange={(e) => handleChange("note", e.target.value)}
                 placeholder="輸入備註或描述商品的相關訊息..."
                 className="min-h-[100px]"
               />
             </div>
-            
+
             <DialogFooter>
               <Button
                 type="button"
@@ -242,12 +211,12 @@ export function PurchaseEditDialog({ purchaseId }: PurchaseEditDialogProps) {
               >
                 取消
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-[#08678C]"
                 disabled={isLoading}
               >
-                {isLoading ? '處理中...' : '儲存變更'}
+                {isLoading ? "處理中..." : "儲存變更"}
               </Button>
             </DialogFooter>
           </form>

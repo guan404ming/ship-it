@@ -4,12 +4,14 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { InventoryDashboardRow } from "@/lib/types";
-import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
+import { PurchaseImportDialog } from "@/components/purchase-import/purchase-import-dialog";
 import { InventoryHeader } from "./inventory-header";
 import { InventorySummary } from "./inventory-summary";
 import { InventoryFilterBar } from "./inventory-filter-bar";
 import { InventoryTable } from "./inventory-table";
 import { InventoryStatusExplanation } from "./inventory-status-explanation";
+import { deleteProductModels } from "@/actions/models";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 interface InventoryClientProps {
   initialInventory: InventoryDashboardRow[];
@@ -33,6 +35,7 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     new Set()
   );
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   const handleInventoryImport = () => {
     router.push("/upload?type=inventory");
@@ -75,10 +78,12 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
   const filteredAndSortedData = React.useMemo(() => {
     let filteredData = [...initialInventory].map((item) => ({
       ...item,
-      supplier_name: item.supplier_name || "廠商" + ((item.model_id % 5) + 1),
-      remaining_days: item.remaining_days || Math.floor(Math.random() * 20) + 1,
-      is_ordered:
-        item.is_ordered !== undefined ? item.is_ordered : Math.random() > 0.5,
+      supplier_name: item.supplier_name || "手動匯入",
+      remaining_days: item.remaining_days || 0,
+      has_active_purchase:
+        item.has_active_purchase !== undefined
+          ? item.has_active_purchase
+          : false,
     }));
 
     if (searchQuery) {
@@ -105,8 +110,10 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
 
     if (orderStatusFilter !== "所有狀態") {
       filteredData = filteredData.filter((item) => {
-        if (orderStatusFilter === "已叫貨") return item.is_ordered === true;
-        if (orderStatusFilter === "未叫貨") return item.is_ordered === false;
+        if (orderStatusFilter === "已叫貨")
+          return item.has_active_purchase === true;
+        if (orderStatusFilter === "未叫貨")
+          return item.has_active_purchase === false;
         return true;
       });
     }
@@ -116,17 +123,27 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
         const aValue = a[sortConfig.key as keyof InventoryDashboardRow];
         const bValue = b[sortConfig.key as keyof InventoryDashboardRow];
 
-        if (aValue !== undefined && bValue !== undefined) {
-          const aCompare = aValue ?? 0;
-          const bCompare = bValue ?? 0;
-          if (aCompare < bCompare) {
-            return sortConfig.direction === "ascending" ? -1 : 1;
-          }
-          if (aCompare > bCompare) {
-            return sortConfig.direction === "ascending" ? 1 : -1;
-          }
+        // Handle undefined values
+        if (aValue === undefined && bValue === undefined) return 0;
+        if (aValue === undefined) return 1;
+        if (bValue === undefined) return -1;
+
+        // Handle string values
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          return sortConfig.direction === "ascending"
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
         }
-        return 0;
+
+        // Handle numeric values
+        const aCompare = Number(aValue);
+        const bCompare = Number(bValue);
+
+        if (sortConfig.direction === "ascending") {
+          return aCompare - bCompare;
+        } else {
+          return bCompare - aCompare;
+        }
       });
     }
 
@@ -168,9 +185,13 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     );
   };
 
-  const handleBulkDelete = () => {
-    alert(`已選擇 ${selectedItems.size} 個項目準備刪除`);
+  const handleBulkDelete = async () => {
+    const modelIds = Array.from(selectedItems).map((item) =>
+      parseInt(item.split("-")[1])
+    );
+    await deleteProductModels(modelIds);
     setSelectedItems(new Set());
+    router.refresh();
   };
 
   const hasActiveFilters =
@@ -179,45 +200,53 @@ export function InventoryClient({ initialInventory }: InventoryClientProps) {
     orderStatusFilter !== "所有狀態";
 
   return (
-    <div className="w-full">
-      <div className="flex flex-1 flex-col gap-4">
-        <InventoryHeader onInventoryImport={handleInventoryImport} />
-        <InventorySummary
-          totalItems={totalItems}
-          lowStockItems={lowStockItems}
+    <div className="flex flex-1 flex-col h-full w-full">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <InventoryHeader onInventoryImport={handleInventoryImport} />
+          <InventorySummary
+            totalItems={totalItems}
+            lowStockItems={lowStockItems}
+          />
+          <InventoryFilterBar
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            stockStatusFilter={stockStatusFilter}
+            onStockStatusFilterChange={handleStockStatusFilter}
+            orderStatusFilter={orderStatusFilter}
+            onOrderStatusFilterChange={handleOrderStatusFilter}
+            selectedItemsCount={selectedItems.size}
+            onBulkOrder={() => setIsDialogOpen(true)}
+            onBulkDelete={() => setIsDeleteDialogOpen(true)}
+            onClearAllFilters={clearAllFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+          <InventoryTable
+            filteredAndSortedData={filteredAndSortedData}
+            selectedItems={selectedItems}
+            sortConfig={sortConfig}
+            onToggleItemSelection={toggleItemSelection}
+            onToggleSelectAll={toggleSelectAll}
+            onRequestSort={requestSort}
+            onStockStatusFilter={handleStockStatusFilter}
+            onOrderStatusFilter={handleOrderStatusFilter}
+            stockStatusFilter={stockStatusFilter}
+            orderStatusFilter={orderStatusFilter}
+          />
+          <InventoryStatusExplanation />
+        </div>
+        <PurchaseImportDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          selectedItems={isDialogOpen ? getSelectedItemsData() : []}
         />
-        <InventoryFilterBar
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          stockStatusFilter={stockStatusFilter}
-          onStockStatusFilterChange={handleStockStatusFilter}
-          orderStatusFilter={orderStatusFilter}
-          onOrderStatusFilterChange={handleOrderStatusFilter}
-          selectedItemsCount={selectedItems.size}
-          onBulkOrder={() => setIsDialogOpen(true)}
-          onBulkDelete={handleBulkDelete}
-          onClearAllFilters={clearAllFilters}
-          hasActiveFilters={hasActiveFilters}
+        <DeleteConfirmationDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={handleBulkDelete}
+          itemCount={selectedItems.size}
         />
-        <InventoryTable
-          filteredAndSortedData={filteredAndSortedData}
-          selectedItems={selectedItems}
-          sortConfig={sortConfig}
-          onToggleItemSelection={toggleItemSelection}
-          onToggleSelectAll={toggleSelectAll}
-          onRequestSort={requestSort}
-          onStockStatusFilter={handleStockStatusFilter}
-          onOrderStatusFilter={handleOrderStatusFilter}
-          stockStatusFilter={stockStatusFilter}
-          orderStatusFilter={orderStatusFilter}
-        />
-        <InventoryStatusExplanation />
       </div>
-      <PurchaseImportDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        selectedItems={isDialogOpen ? getSelectedItemsData() : []}
-      />
     </div>
   );
 }

@@ -4,6 +4,29 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
 import { OrderStatus } from "@/lib/types";
+import dayjs from "dayjs";
+import { upsertStockRecord } from "./stock_record";
+
+// Type for order input (extends the base Order type with custom fields)
+type OrderInput = {
+  order_id?: string;
+  buyer_id: number;
+  product_total_price: number;
+  shipping_fee: number;
+  total_paid: number;
+  order_status: OrderStatus;
+  payment_time?: string;
+  shipped_at?: string;
+  completed_at?: string;
+  items: Array<{
+    product_id: number;
+    model_id: number;
+    quantity: number;
+    returned_quantity: number;
+    sold_price: number;
+    total_price: number;
+  }>;
+};
 
 interface OrderUpdateData {
   order_status: OrderStatus;
@@ -12,58 +35,70 @@ interface OrderUpdateData {
   cancel_reason?: string;
 }
 
-export async function createOrder(
-  buyerId: number,
-  items: {
-    productId: number;
-    modelId: number;
-    quantity: number;
-    soldPrice: number;
-  }[],
-  shippingFee: number
-) {
+export async function upsertOrder(input: OrderInput) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  const productTotalPrice = items.reduce(
-    (sum, item) => sum + item.soldPrice * item.quantity,
-    0
-  );
-  const totalPaid = productTotalPrice + shippingFee;
+  try {
+    // Destructure to separate items from order data
+    const { items, ...orderData } = input;
 
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert([
-      {
-        buyer_id: buyerId,
-        product_total_price: productTotalPrice,
-        shipping_fee: shippingFee,
-        total_paid: totalPaid,
-        order_status: "pending",
-        created_at: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
+    // Generate a unique order_id (e.g., 'ORD' + YYYYMMDDHHMMSS + random 4 digits)
+    if (!input.order_id) {
+      const dateStr = dayjs().format("YYYYMMDDHHmmss");
+      const randomStr = Math.floor(1000 + Math.random() * 9000).toString();
+      input.order_id = `ORD${dateStr}${randomStr}`;
+    }
 
-  if (orderError) throw orderError;
+    // Upsert order by order_id
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .upsert(
+        {
+          order_id: input.order_id,
+          ...orderData,
+          created_at: dayjs().toISOString(),
+          payment_time: orderData.payment_time ?? null,
+          shipped_at: orderData.shipped_at ?? null,
+          completed_at: orderData.completed_at ?? null,
+        },
+        { onConflict: "order_id" }
+      )
+      .select()
+      .single();
+    if (orderError || !order) throw orderError;
 
-  const orderItems = items.map((item) => ({
-    order_id: order.order_id,
-    product_id: item.productId,
-    model_id: item.modelId,
-    quantity: item.quantity,
-    sold_price: item.soldPrice,
-    total_price: item.soldPrice * item.quantity,
-  }));
+    // Delete old order_items for this order_id
+    const { error: deleteItemsError } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", order.order_id);
+    if (deleteItemsError) throw deleteItemsError;
 
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItems);
+    // Insert order items using spread syntax
+    const orderItems = items.map((item) => ({
+      ...item,
+      order_id: order.order_id,
+    }));
 
-  if (itemsError) throw itemsError;
+    const { error: orderItemsError } = await supabase
+      .from("order_items")
+      .insert(orderItems);
+    if (orderItemsError) throw orderItemsError;
 
-  return order;
+    if (orderData.order_status === "delivered") {
+      await Promise.all(
+        items.map(async (item) => {
+          await upsertStockRecord(item.model_id, false, item.quantity);
+        })
+      );
+    }
+
+    return order;
+  } catch (error) {
+    console.error("Error creating order:", error);
+    throw error;
+  }
 }
 
 export async function updateOrderStatus(
@@ -79,9 +114,9 @@ export async function updateOrderStatus(
   };
 
   if (status === "shipped") {
-    updateData.shipped_at = new Date().toISOString();
+    updateData.shipped_at = dayjs().toISOString();
   } else if (status === "delivered") {
-    updateData.completed_at = new Date().toISOString();
+    updateData.completed_at = dayjs().toISOString();
   }
 
   if (status === "canceled" && cancelReason) {

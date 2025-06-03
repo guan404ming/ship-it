@@ -24,12 +24,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PurchaseImportDialog } from "@/components/purchase-import-dialog";
+import { PurchaseImportDialog } from "@/components/purchase-import/purchase-import-dialog";
 import { PurchaseEditDialog } from "@/components/purchase-edit-dialog";
-// TODO: 前端需要從後端獲取叫貨資料，目前使用假資料
-import { purchaseOrderData } from "@/lib/data/purchase-data";
+import { PurchaseDashboardRow } from "@/lib/types";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
+import dayjs from "dayjs";
+import {
+  deletePurchaseItems,
+  updatePurchaseBatchStatus,
+} from "@/actions/purchase";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-export default function PurchaseTempClient() {
+interface PurchaseTempClientProps {
+  initialPurchase: PurchaseDashboardRow[];
+}
+
+export default function PurchaseClient({
+  initialPurchase,
+}: PurchaseTempClientProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedRows, setSelectedRows] = React.useState<
@@ -41,20 +55,17 @@ export default function PurchaseTempClient() {
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
     "asc"
   );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   const handlePurchaseOrderImport = () => {
     setIsDialogOpen(true);
   };
 
-  const totalOrders = new Set(purchaseOrderData.map((item) => item.batch_id))
-    .size;
-  const totalItems = purchaseOrderData.length;
-
-  const filteredData = React.useMemo(() => {
-    let filtered = [...purchaseOrderData];
+  const filteredAndSortedData = React.useMemo(() => {
+    let filteredData = [...initialPurchase];
 
     if (searchQuery) {
-      filtered = filtered.filter(
+      filteredData = filteredData.filter(
         (item) =>
           (item.product_name?.toLowerCase() || "").includes(
             searchQuery.toLowerCase()
@@ -69,7 +80,7 @@ export default function PurchaseTempClient() {
     }
 
     // Sort data based on the selected sort field and direction
-    filtered.sort((a, b) => {
+    filteredData.sort((a, b) => {
       // Handle null values and parse dates for proper comparison
       const valueA = a[sortField];
       const valueB = b[sortField];
@@ -89,8 +100,13 @@ export default function PurchaseTempClient() {
       }
     });
 
-    return filtered;
-  }, [searchQuery, sortField, sortDirection]);
+    return filteredData.filter((item) => item.status !== "confirmed");
+  }, [searchQuery, sortField, sortDirection, initialPurchase]);
+
+  const totalOrders = new Set(
+    filteredAndSortedData.map((item) => item.batch_id)
+  ).size;
+  const totalItems = filteredAndSortedData.length;
 
   // Toggle a single row selection
   const toggleRowSelection = (id: number) => {
@@ -103,7 +119,7 @@ export default function PurchaseTempClient() {
   // Toggle all rows selection
   const toggleAllRows = () => {
     if (
-      Object.keys(selectedRows).length === filteredData.length &&
+      Object.keys(selectedRows).length === filteredAndSortedData.length &&
       Object.values(selectedRows).every((selected) => selected)
     ) {
       // If all are selected, clear selection
@@ -111,7 +127,7 @@ export default function PurchaseTempClient() {
     } else {
       // Otherwise, select all filtered rows
       const newSelectedRows: Record<string, boolean> = {};
-      filteredData.forEach((item) => {
+      filteredAndSortedData.forEach((item) => {
         newSelectedRows[item.item_id] = true;
       });
       setSelectedRows(newSelectedRows);
@@ -120,8 +136,8 @@ export default function PurchaseTempClient() {
 
   // Check if all filtered rows are selected
   const areAllRowsSelected =
-    filteredData.length > 0 &&
-    filteredData.every((item) => selectedRows[item.item_id]);
+    filteredAndSortedData.length > 0 &&
+    filteredAndSortedData.every((item) => selectedRows[item.item_id]);
 
   // Handle column sorting
   const handleSort = (field: "created_at" | "expect_date") => {
@@ -140,29 +156,47 @@ export default function PurchaseTempClient() {
 
   // Get selected items data
   const getSelectedItemsData = () => {
-    return filteredData.filter((item) => selectedRows[item.item_id]);
+    return filteredAndSortedData.filter((item) => selectedRows[item.item_id]);
   };
 
   // Handle bulk delete
-  const handleBulkDelete = () => {
-    // Placeholder for future implementation
-    console.log("以下項目將被刪除:", getSelectedItemsData());
-    alert(`已選擇 ${selectedItemsCount} 個項目準備刪除`);
+  const handleBulkDelete = async () => {
+    try {
+      const selectedItems = getSelectedItemsData();
+      const itemsToDelete = selectedItems.map((item) => ({
+        batch_id: item.batch_id,
+        item_id: item.item_id,
+      }));
 
-    // Here you would implement the actual delete logic in a real application
-    // For now, just clear the selection
-    setSelectedRows({});
+      await deletePurchaseItems(itemsToDelete);
+
+      toast.success(`成功刪除 ${selectedItemsCount} 個項目`);
+      setSelectedRows({});
+      router.refresh();
+    } catch (error) {
+      console.error("Error deleting items:", error);
+      toast.error("刪除項目時發生錯誤");
+    }
   };
 
   // Handle marking items as delivered
-  const handleMarkAsDelivered = () => {
-    // Placeholder for future implementation
-    console.log("以下項目將被標記為已送達:", getSelectedItemsData());
-    alert(`已標記 ${selectedItemsCount} 個項目為已送達`);
+  const handleMarkAsDelivered = async () => {
+    try {
+      const selectedItems = getSelectedItemsData();
+      const itemsToUpdate = selectedItems.map((item) => ({
+        batch_id: item.batch_id,
+        item_id: item.item_id,
+      }));
 
-    // Here you would implement the actual API call to update the status
-    // For now, just clear the selection
-    setSelectedRows({});
+      await updatePurchaseBatchStatus(itemsToUpdate, "confirmed");
+
+      toast.success(`成功標記 ${selectedItemsCount} 個項目為已送達`);
+      setSelectedRows({});
+      router.refresh();
+    } catch (error) {
+      console.error("Error marking items as delivered:", error);
+      toast.error("標記項目為已送達時發生錯誤");
+    }
   };
 
   return (
@@ -245,7 +279,7 @@ export default function PurchaseTempClient() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={handleBulkDelete}
+                    onClick={() => setIsDeleteDialogOpen(true)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     刪除 ({selectedItemsCount})
@@ -282,7 +316,6 @@ export default function PurchaseTempClient() {
                     <TableHead>商品名稱</TableHead>
                     <TableHead>規格</TableHead>
                     <TableHead className="text-right">數量</TableHead>
-                    <TableHead className="text-right">單價</TableHead>
                     <TableHead>
                       <button
                         className="flex items-center gap-1 focus:outline-none hover:text-primary"
@@ -322,7 +355,7 @@ export default function PurchaseTempClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredData.map((item) => (
+                  {filteredAndSortedData.map((item) => (
                     <TableRow key={item.item_id}>
                       <TableCell>
                         <Checkbox
@@ -338,16 +371,15 @@ export default function PurchaseTempClient() {
                       <TableCell className="text-right font-mono">
                         {item.quantity}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {item.unit_cost}
+                      <TableCell>
+                        {dayjs(item.created_at).format("YYYY-MM-DD")}
                       </TableCell>
-                      <TableCell>{item.created_at}</TableCell>
-                      <TableCell>{item.expect_date}</TableCell>
+                      <TableCell>
+                        {dayjs(item.expect_date).format("YYYY-MM-DD")}
+                      </TableCell>
                       <TableCell>{item.note || "-"}</TableCell>
                       <TableCell>
-                        <PurchaseEditDialog
-                          purchaseId={item.item_id.toString()}
-                        />
+                        <PurchaseEditDialog purchase={item} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -357,6 +389,13 @@ export default function PurchaseTempClient() {
           </div>
         </div>
       </div>
+
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleBulkDelete}
+        itemCount={selectedItemsCount}
+      />
     </div>
   );
 }

@@ -1,20 +1,17 @@
-"use client";
-
-import * as React from "react";
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverallPerformance } from "@/components/history/overall-performance";
 import { ProductPerformance } from "@/components/history/product-performance";
 import { SalesRankings } from "@/components/history/sales-rankings";
 
-// TODO: 前端需要根據使用者輸入的時間範圍從後端獲取銷售歷史資料，目前使用假資料
-import {
-  salesData,
-  productRankingData,
-  productSalesData,
-} from "@/lib/data/sales-data";
+import { getHistoryData } from "@/actions/stats";
+import dayjs from "dayjs";
 
-export default function HistoryClient() {
+export default async function HistoryClient() {
+  const { salesData, productSalesData } = await getHistoryData(
+    dayjs().subtract(180, "day").format("YYYY-MM-DD"),
+    dayjs().format("YYYY-MM-DD")
+  );
+
   return (
     <div className="flex flex-1 flex-col h-full w-full">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -39,7 +36,7 @@ export default function HistoryClient() {
             </TabsContent>
 
             <TabsContent value="rankings" className="mt-4">
-              <SalesRankings productRankingData={productRankingData} />
+              <SalesRankings productSalesData={productSalesData} />
             </TabsContent>
           </Tabs>
         </div>

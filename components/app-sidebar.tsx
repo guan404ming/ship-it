@@ -37,7 +37,7 @@ const data = {
     },
     {
       title: "我的叫貨",
-      url: "/purchase-temp",
+      url: "/purchase",
       icon: IconFolder,
     },
     {

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -21,6 +20,8 @@ import { getProductAndModelIdByName } from "@/actions/products";
 import { toast } from "sonner";
 import { createOrder } from "@/actions/orders";
 import dayjs from "dayjs";
+import { getSupplierIdByName } from "@/actions/suppliers";
+import { createPurchaseBatch } from "@/actions/purchase";
 
 interface FileUploadSectionProps {
   fileImportType: "bulk-order" | "bulk-inventory";
@@ -151,6 +152,17 @@ export function FileUploadSection({
               row["商品名稱"],
               row["商品規格"]
             );
+
+            const supplier_id = await getSupplierIdByName(row["廠商名稱"]);
+            if (supplier_id !== null) {
+              await createPurchaseBatch(
+                supplier_id,
+                dayjs().toISOString(),
+                dayjs().toISOString(),
+                [{ model_id, quantity: parseInt(row["數量"], 10) }],
+                "confirmed"
+              );
+            }
 
             await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
           })
@@ -361,14 +373,14 @@ export function FileUploadSection({
             </div>
           )}
 
-          <div className="text-sm text-gray-500 mt-4">
+          {/* <div className="text-sm text-gray-500 mt-4">
             <h4 className="font-medium">備註</h4>
             <Textarea
               ref={noteRef}
               placeholder="請輸入此次匯入的相關資訊..."
               className="w-full h-[184px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground mt-2 min-h-[80px]"
             />
-          </div>
+          </div> */}
 
           <Button
             className="w-full"

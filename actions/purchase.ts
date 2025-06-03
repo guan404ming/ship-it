@@ -13,7 +13,8 @@ export async function createPurchaseBatch(
     model_id: number;
     quantity: number;
     note?: string | null;
-  }[]
+  }[],
+  status?: "pending" | "confirmed" | "draft"
 ) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
@@ -23,7 +24,7 @@ export async function createPurchaseBatch(
     .insert([
       {
         supplier_id: supplierId,
-        status: "pending",
+        status: status || "pending",
         created_at: orderDate || new Date().toISOString(),
         expect_date: expectedDeliveryDate,
       },

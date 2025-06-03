@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { upsertStockRecord } from "@/actions/stock_record";
 import { createOrder } from "@/actions/orders";
 import dayjs from "dayjs";
+import { getSupplierIdByName } from "@/actions/suppliers";
+import { createPurchaseBatch } from "@/actions/purchase";
 
 interface Model {
   id: string;
@@ -32,6 +34,7 @@ export function ManualInputSection({
   onManualImportTypeChange,
 }: ManualInputSectionProps) {
   const [productName, setProductName] = React.useState<string>("");
+  const [supplierName, setSupplierName] = React.useState<string>("");
   const [modelName, setModelName] = React.useState<string>("");
   const [modelNameError, setModelNameError] = React.useState<string | null>(
     null
@@ -220,6 +223,17 @@ export function ManualInputSection({
               productName,
               model.modelName
             );
+
+            const supplier_id = await getSupplierIdByName(supplierName);
+            if (supplier_id !== null) {
+              await createPurchaseBatch(
+                supplier_id,
+                dayjs().toISOString(),
+                dayjs().toISOString(),
+                [{ model_id, quantity: parseInt(model.quantity, 10) }]
+              );
+            }
+
             await upsertStockRecord(
               model_id,
               true,
@@ -274,6 +288,17 @@ export function ManualInputSection({
           </div>
 
           <div className="grid gap-3">
+            {manualImportType === "inventory" && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="supplier-name">廠商名稱</Label>
+                <Input
+                  id="supplier-name"
+                  placeholder="請輸入廠商名稱"
+                  value={supplierName}
+                  onChange={(e) => setSupplierName(e.target.value)}
+                />
+              </div>
+            )}
             <div className="grid gap-1.5">
               <Label htmlFor="item-name">商品名稱</Label>
               <Input

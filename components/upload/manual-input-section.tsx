@@ -39,8 +39,6 @@ export function ManualInputSection({
   const [modelNameError, setModelNameError] = React.useState<string | null>(
     null
   );
-  const [price, setPrice] = React.useState<string>("");
-  const [priceError, setPriceError] = React.useState<string | null>(null);
   const [models, setModels] = React.useState<Model[]>([]);
   const [orderId, setOrderId] = React.useState<string>("");
 
@@ -83,21 +81,6 @@ export function ManualInputSection({
     setModels(updatedModels);
   };
 
-  const validatePrice = (value: string) => {
-    setPrice(value);
-
-    if (!value) {
-      setPriceError(null);
-      return;
-    }
-
-    const numberValue = parseFloat(value);
-    if (isNaN(numberValue) || numberValue <= 0) {
-      setPriceError("請輸入大於0的數字");
-    } else {
-      setPriceError(null);
-    }
-  };
 
   const addModel = () => {
     if (!modelName.trim()) return;

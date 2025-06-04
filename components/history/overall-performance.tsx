@@ -61,15 +61,38 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
     }
   }, [isMobile]);
 
-  const currentMonthData = salesData[salesData.length - 1];
-  const previousMonthData = salesData[salesData.length - 5];
-  const changePercentage =
-    Math.round(
-      ((currentMonthData.amount - previousMonthData.amount) /
-        previousMonthData.amount) *
-        100 *
-        10
-    ) / 10;
+  // Calculate monthly totals from the 30-day dataset
+  const monthlyData = useMemo(() => {
+    // Since salesData now contains the last 30 days, sum all of it
+    const currentAmount = salesData.reduce((sum, item) => sum + item.amount, 0);
+    const currentQuantity = salesData.reduce((sum, item) => sum + item.quantity, 0);
+
+    // For comparison, use the first half vs second half of the 30-day period
+    const midPoint = Math.floor(salesData.length / 2);
+    const firstHalf = salesData.slice(0, midPoint);
+    const secondHalf = salesData.slice(midPoint);
+
+    const firstHalfAmount = firstHalf.reduce((sum, item) => sum + item.amount, 0);
+    const firstHalfQuantity = firstHalf.reduce((sum, item) => sum + item.quantity, 0);
+    const secondHalfAmount = secondHalf.reduce((sum, item) => sum + item.amount, 0);
+    const secondHalfQuantity = secondHalf.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Calculate growth rates (second half vs first half)
+    const amountGrowthRate = firstHalfAmount > 0 
+      ? Math.round(((secondHalfAmount - firstHalfAmount) / firstHalfAmount) * 100 * 10) / 10
+      : 0;
+    
+    const quantityGrowthRate = firstHalfQuantity > 0 
+      ? Math.round(((secondHalfQuantity - firstHalfQuantity) / firstHalfQuantity) * 100 * 10) / 10
+      : 0;
+
+    return {
+      currentAmount,
+      currentQuantity,
+      amountGrowthRate,
+      quantityGrowthRate,
+    };
+  }, [salesData]);
 
   const filteredData = useMemo(() => {
     const now = dayjs().toDate();
@@ -93,10 +116,10 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
             <div className="text-sm text-muted-foreground">月銷售額</div>
             <div className="flex items-baseline justify-between">
               <h2 className="text-3xl font-bold text-[#08678C]">
-                $ {currentMonthData.amount.toLocaleString()}
+                $ {monthlyData.currentAmount.toLocaleString()}
               </h2>
-              <span className="text-sm text-green-600">
-                ↑ {changePercentage}%
+              <span className={`text-sm ${monthlyData.amountGrowthRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {monthlyData.amountGrowthRate >= 0 ? '↑' : '↓'} {Math.abs(monthlyData.amountGrowthRate)}%
               </span>
             </div>
           </CardContent>
@@ -107,10 +130,10 @@ export function OverallPerformance({ salesData }: OverallPerformanceProps) {
             <div className="text-sm text-muted-foreground">月銷量</div>
             <div className="flex items-baseline justify-between">
               <h2 className="text-3xl font-bold text-[#08678C]">
-                {currentMonthData.quantity.toLocaleString()} 件
+                {monthlyData.currentQuantity.toLocaleString()} 件
               </h2>
-              <span className="text-sm text-green-600">
-                ↑ {changePercentage}%
+              <span className={`text-sm ${monthlyData.quantityGrowthRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {monthlyData.quantityGrowthRate >= 0 ? '↑' : '↓'} {Math.abs(monthlyData.quantityGrowthRate)}%
               </span>
             </div>
           </CardContent>

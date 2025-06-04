@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 
 export default async function HistoryClient() {
   const { salesData, productSalesData } = await getHistoryData(
-    dayjs().subtract(180, "day").format("YYYY-MM-DD"),
+    dayjs().subtract(30, "day").format("YYYY-MM-DD"),
     dayjs().format("YYYY-MM-DD")
   );
 

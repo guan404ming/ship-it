@@ -4,13 +4,9 @@ import { ProductPerformance } from "@/components/history/product-performance";
 import { SalesRankings } from "@/components/history/sales-rankings";
 
 import { getHistoryData } from "@/actions/stats";
-import dayjs from "dayjs";
 
 export default async function HistoryClient() {
-  const { salesData, productSalesData } = await getHistoryData(
-    dayjs().subtract(180, "day").format("YYYY-MM-DD"),
-    dayjs().format("YYYY-MM-DD")
-  );
+  const { salesData, productSalesData } = await getHistoryData();
 
   return (
     <div className="flex flex-1 flex-col h-full w-full">

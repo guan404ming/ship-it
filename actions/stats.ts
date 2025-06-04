@@ -2,10 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GroupedProductSales, RankingProduct, SalesData } from "@/lib/types";
 import { cookies } from "next/headers";
 
-export async function getHistoryData(
-  startDate: string,
-  endDate: string
-): Promise<{
+export async function getHistoryData(): Promise<{
   salesData: SalesData[];
   productSalesData: GroupedProductSales[];
   productRankingData: RankingProduct[];
@@ -26,9 +23,7 @@ export async function getHistoryData(
     // 1. 直接 select sales_by_date view
     const { data: salesByDate, error: salesByDateError } = await supabase
       .from("sales_by_date")
-      .select("*")
-      .gte("date", startDate)
-      .lte("date", endDate);
+      .select("*");
     if (salesByDateError) throw salesByDateError;
 
     // 2. 撈 products, models

@@ -81,7 +81,6 @@ export function ManualInputSection({
     setModels(updatedModels);
   };
 
-
   const addModel = () => {
     if (!modelName.trim()) return;
 
@@ -159,6 +158,10 @@ export function ManualInputSection({
           ? "請檢查所有規格的數量與價格"
           : "請檢查所有規格的數量"
       );
+      return;
+    }
+    if (supplierName.trim() === "") {
+      toast.error("請輸入廠商名稱");
       return;
     }
     if (manualImportType === "order") {

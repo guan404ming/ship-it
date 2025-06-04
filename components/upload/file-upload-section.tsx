@@ -49,7 +49,6 @@ export function FileUploadSection({
   );
   const [uploadMessage, setUploadMessage] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const noteRef = React.useRef<HTMLTextAreaElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -136,6 +135,7 @@ export function FileUploadSection({
 
   const handleFileSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    let successCount = 0;
 
     if (!file || !fileImportType) {
       return;
@@ -149,10 +149,16 @@ export function FileUploadSection({
       if (fileImportType === "bulk-inventory") {
         await Promise.all(
           csvData.map(async (row) => {
+            console.log(row["廠商名稱"], row["廠商名稱"] == "");
             const { model_id } = await getProductAndModelIdByName(
               row["商品名稱"],
               row["商品規格"]
             );
+
+            if (!row["廠商名稱"] || row["廠商名稱"] == "") {
+              toast.error("請輸入廠商名稱");
+              return;
+            }
 
             const supplier_id = await getSupplierIdByName(row["廠商名稱"]);
             if (supplier_id !== null) {
@@ -163,12 +169,12 @@ export function FileUploadSection({
                 [{ model_id, quantity: parseInt(row["數量"], 10) }],
                 "confirmed"
               );
+              successCount++;
             }
 
             await upsertStockRecord(model_id, true, parseInt(row["數量"], 10));
           })
         );
-        toast.success("成功更新庫存，共 " + csvData.length + " 筆");
       } else {
         await Promise.all(
           csvData.map(async (row) => {
@@ -200,15 +206,19 @@ export function FileUploadSection({
                 },
               ],
             });
+            successCount++;
           })
         );
-        toast.success("成功建立訂單，共 " + csvData.length + " 筆");
       }
-      setUploadSuccess(true);
-      setUploadMessage("匯入成功！");
-      resetCsvData();
-      if (noteRef.current) {
-        noteRef.current.value = "";
+      if (successCount > 0) {
+        toast.success(
+          fileImportType === "bulk-inventory"
+            ? "成功更新庫存，共 " + successCount + " 筆"
+            : "成功建立訂單，共 " + successCount + " 筆"
+        );
+        setUploadSuccess(true);
+        setUploadMessage("匯入成功！");
+        resetCsvData();
       }
     } catch (error) {
       console.error("上傳時發生錯誤:", error);
